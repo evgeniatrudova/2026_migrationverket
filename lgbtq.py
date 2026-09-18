@@ -359,7 +359,8 @@ def main():
                 # Healthcare QoL Chart
                 fig_qol = go.Figure()
                 fig_qol.add_trace(go.Bar(name='Sverige (De Jure/Vårdgaranti)', x=['Vårdtillgång', 'Psykisk Ohälsa'], y=[metrics['qol']['sweden_healthcare_score'], metrics['qol']['mental_health_burden_sweden']], marker_color='rgba(148, 163, 184, 0.6)'))
-                fig_qol.add_trace(go.Bar(name=f'{target_state} (De Facto)', x=['Vårdtillgång', 'Psykisk Ohälsa'], y=[metrics['qol']['healthcare_access_score'], metrics['qol']['mental_health_burden_state']], marker_color='#4F46E5'))
+                # FIXED Key for healthcare trans value here to avoid KeyError:
+                fig_qol.add_trace(go.Bar(name=f'{target_state} (De Facto)', x=['Vårdtillgång', 'Psykisk Ohälsa'], y=[metrics['qol']['healthcare_trans'], metrics['qol']['mental_health_burden_state']], marker_color='#4F46E5'))
                 fig_qol.update_layout(barmode='group', height=200, margin=dict(t=0, b=0, l=0, r=0))
                 st.plotly_chart(fig_qol, use_container_width=True)
 

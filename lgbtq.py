@@ -28,8 +28,8 @@ st.set_page_config(page_title="LGBTQ US", layout="wide", initial_sidebar_state="
 
 I18N = {
     "sv": {
-        "title": "Kumulativ Bedömning & Livskvalitet s LQBTQ i USA",
-        "legal_warning": "RÄTTSLIGT MEDDELANDE: AI-verktyget ägd av EVelution AB. Tillfällig användning gäller vid Robin L`Fira ärande, 2026.",
+        "title": "Kumulativ Bedömning & Livskvalitet för LGBTQ i USA",
+        "legal_warning": "RÄTTSLIGT MEDDELANDE: AI-verktyget ägd av EVelution AB. Tillfällig användning gäller vid Robin L'Fira ärende, 2026.",
         "admin_header": "1. Ärendeuppgifter",
         "case_num": "Ärendenummer",
         "officer_1": "Handläggare",
@@ -74,68 +74,69 @@ STATE_MAPPING = {
     "Wisconsin": "University of Wisconsin", "Wyoming": "University of Wyoming"
 }
 
+STATE_ABBR = {
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR", "California": "CA", "Colorado": "CO",
+    "Connecticut": "CT", "Delaware": "DE", "Florida": "FL", "Georgia": "GA", "Hawaii": "HI", "Idaho": "ID",
+    "Illinois": "IL", "Indiana": "IN", "Iowa": "IA", "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA",
+    "Maine": "ME", "Maryland": "MD", "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS",
+    "Missouri": "MO", "Montana": "MT", "Nebraska": "NE", "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
+    "New Mexico": "NM", "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK",
+    "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC", "South Dakota": "SD",
+    "Tennessee": "TN", "Texas": "TX", "Utah": "UT", "Vermont": "VT", "Virginia": "VA", "Washington": "WA",
+    "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY"
+}
+
 # ---------------------------------------------------------
 # Empirical State Database (Source of Truth Fallback)
 # ---------------------------------------------------------
 STATE_EMPIRICAL_DB = {
-    "Arizona": {"intro": 14, "passed": 1, "tier": "Gul", "care": "Restriktioner för minderåriga", "homeless_rr": 3.4, "hate_rate": 8.5},
-    "Texas": {"intro": 56, "passed": 7, "tier": "Röd", "care": "Totalförbud (Minderåriga)", "homeless_rr": 4.1, "hate_rate": 11.2},
-    "Florida": {"intro": 47, "passed": 6, "tier": "Röd", "care": "Förbud (Vuxna & Unga)", "homeless_rr": 4.5, "hate_rate": 10.5},
-    "California": {"intro": 0, "passed": 0, "tier": "Grön", "care": "Skyddad (Sanctuary)", "homeless_rr": 2.2, "hate_rate": 8.1},
-    "New York": {"intro": 2, "passed": 0, "tier": "Grön", "care": "Skyddad", "homeless_rr": 2.0, "hate_rate": 7.2},
-    "Ohio": {"intro": 18, "passed": 2, "tier": "Gul", "care": "Restriktioner (Veto åsidosatt)", "homeless_rr": 3.2, "hate_rate": 8.9},
-    "Missouri": {"intro": 35, "passed": 4, "tier": "Röd", "care": "Totalförbud", "homeless_rr": 4.0, "hate_rate": 10.1},
-    "Tennessee": {"intro": 31, "passed": 5, "tier": "Röd", "care": "Totalförbud", "homeless_rr": 4.2, "hate_rate": 10.8},
-    "Washington": {"intro": 0, "passed": 0, "tier": "Grön", "care": "Skyddad", "homeless_rr": 2.3, "hate_rate": 6.8},
+    "Arizona": {"intro": 14, "passed": 1, "tier": "Gul", "risk_score": 50, "care": "Restriktioner för minderåriga", "homeless_rr": 3.4, "hate_rate": 8.5},
+    "Texas": {"intro": 56, "passed": 7, "tier": "Röd", "risk_score": 90, "care": "Totalförbud (Minderåriga)", "homeless_rr": 4.1, "hate_rate": 11.2},
+    "Florida": {"intro": 47, "passed": 6, "tier": "Röd", "risk_score": 85, "care": "Förbud (Vuxna & Unga)", "homeless_rr": 4.5, "hate_rate": 10.5},
+    "California": {"intro": 0, "passed": 0, "tier": "Grön", "risk_score": 10, "care": "Skyddad (Sanctuary)", "homeless_rr": 2.2, "hate_rate": 8.1},
+    "New York": {"intro": 2, "passed": 0, "tier": "Grön", "risk_score": 15, "care": "Skyddad", "homeless_rr": 2.0, "hate_rate": 7.2},
+    "Ohio": {"intro": 18, "passed": 2, "tier": "Gul", "risk_score": 60, "care": "Restriktioner (Veto åsidosatt)", "homeless_rr": 3.2, "hate_rate": 8.9},
+    "Missouri": {"intro": 35, "passed": 4, "tier": "Röd", "risk_score": 80, "care": "Totalförbud", "homeless_rr": 4.0, "hate_rate": 10.1},
+    "Tennessee": {"intro": 31, "passed": 5, "tier": "Röd", "risk_score": 82, "care": "Totalförbud", "homeless_rr": 4.2, "hate_rate": 10.8},
+    "Washington": {"intro": 0, "passed": 0, "tier": "Grön", "risk_score": 12, "care": "Skyddad", "homeless_rr": 2.3, "hate_rate": 6.8},
 }
 
 def get_state_profile(state_name: str, year: int) -> dict:
-    """
-    Attempts to scrape live data. Falls back to empirical database 
-    if the network is blocked or HTML structure changes.
-    """
-    # 1. Prepare empirical fallback
     if state_name in STATE_EMPIRICAL_DB:
         profile = STATE_EMPIRICAL_DB[state_name].copy()
     else:
-        # Generic political geography mapping for states not explicitly hardcoded above
         hostile = ["Alabama", "Arkansas", "Idaho", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Mississippi", "Montana", "Nebraska", "North Dakota", "Oklahoma", "South Carolina", "South Dakota", "Utah", "West Virginia", "Wyoming"]
         protective = ["Colorado", "Connecticut", "Delaware", "Hawaii", "Illinois", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Nevada", "New Jersey", "New Mexico", "Oregon", "Rhode Island", "Vermont"]
         if state_name in hostile:
-            profile = {"intro": 25, "passed": 3, "tier": "Röd", "care": "Starkt Begränsad", "homeless_rr": 3.8, "hate_rate": 9.5}
+            profile = {"intro": 25, "passed": 3, "tier": "Röd", "risk_score": 75, "care": "Starkt Begränsad", "homeless_rr": 3.8, "hate_rate": 9.5}
         elif state_name in protective:
-            profile = {"intro": 1, "passed": 0, "tier": "Grön", "care": "Skyddad", "homeless_rr": 2.1, "hate_rate": 7.0}
+            profile = {"intro": 1, "passed": 0, "tier": "Grön", "risk_score": 20, "care": "Skyddad", "homeless_rr": 2.1, "hate_rate": 7.0}
         else:
-            profile = {"intro": 12, "passed": 0, "tier": "Gul", "care": "Tillgänglig (Hotad)", "homeless_rr": 3.0, "hate_rate": 8.0}
+            profile = {"intro": 12, "passed": 0, "tier": "Gul", "risk_score": 45, "care": "Tillgänglig (Hotad)", "homeless_rr": 3.0, "hate_rate": 8.0}
             
-    # 2. Attempt Live Web Scraping
     if BeautifulSoup is not None:
         try:
             state_url_slug = state_name.lower().replace(" ", "-")
             url = f"https://translegislation.com/bills/{year}/{state_url_slug}"
             headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-            
-            response = requests.get(url, headers=headers, timeout=5)
+            response = requests.get(url, headers=headers, timeout=3)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
-                
-                # Heuristic text scanning if specific CSS classes are unknown
                 text_content = soup.get_text()
-                
-                # Extract Introduced (Looking for "tracking X anti-trans bills")
                 intro_match = re.search(r'tracking\s+(\d+)\s+anti-trans\s+bills', text_content, re.IGNORECASE)
                 if intro_match:
                     profile["intro"] = int(intro_match.group(1))
-                    
-                # Dynamically update Tier based on live scraped data
-                if profile["intro"] >= 20 or profile.get("passed", 0) > 0:
-                    profile["tier"] = "Röd"
-                elif profile["intro"] > 0:
-                    profile["tier"] = "Gul"
-                else:
-                    profile["tier"] = "Grön"
+                    if profile["intro"] >= 20 or profile.get("passed", 0) > 0:
+                        profile["tier"] = "Röd"
+                        profile["risk_score"] = 80
+                    elif profile["intro"] > 0:
+                        profile["tier"] = "Gul"
+                        profile["risk_score"] = 50
+                    else:
+                        profile["tier"] = "Grön"
+                        profile["risk_score"] = 15
         except Exception:
-            pass # Silently fallback to empirical database
+            pass
             
     return profile
 
@@ -144,13 +145,11 @@ def get_state_profile(state_name: str, year: int) -> dict:
 # ---------------------------------------------------------
 def fetch_translegislation_data(state: str, year: int) -> dict:
     profile = get_state_profile(state, year)
-    
     sweden = {
         "introduced": 0,
         "passed": 0,
         "environment": "Säker. Riksdagen fokuserar på stärkta rättigheter. Inga fientliga lagförslag."
     }
-    
     bills = []
     if profile["intro"] > 0:
         bills.append({"id": f"Legislative Package {year}", "status": "Active/Passed" if profile["passed"] > 0 else "Introduced", "category": "Multiple", "desc": f"Legislation impacting Education, Healthcare, and Civil Rights. Tracking {profile['intro']} specific bills in {state}."})
@@ -246,12 +245,12 @@ def fetch_pubmed_data(state: str, year: int) -> dict:
     filtered_out_count = 0
     
     try:
-        res = requests.get(search_url, timeout=8).json()
+        res = requests.get(search_url, timeout=5).json()
         id_list = res.get("esearchresult", {}).get("idlist", [])
         if not id_list: return {"articles": [], "filtered": 0}
             
         fetch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={','.join(id_list)}&retmode=xml&email={email}"
-        xml_data = requests.get(fetch_url, timeout=12).content
+        xml_data = requests.get(fetch_url, timeout=5).content
         root = ET.fromstring(xml_data)
         
         articles = []
@@ -297,8 +296,6 @@ def fetch_swedish_baselines() -> list:
 # ---------------------------------------------------------
 def generate_legal_synthesis(df: pd.DataFrame, focus: str, state: str, metrics: dict, tracker: dict) -> str:
     api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_KEY")
-    bills_text = "\n".join(f"- {b['id']} ({b['status']}): {b['desc']}" for b in tracker['state']['bills'])
-    
     if api_key and OpenAI is not None:
         try:
             client = OpenAI(api_key=api_key)
@@ -383,6 +380,70 @@ def main():
     st.error(t["legal_warning"])
 
     st.markdown(f"**{t['methodology_header']}**\n\n*{t['methodology_text']}*")
+    st.divider()
+
+    # --- NATIONWIDE OVERVIEW & INTERACTIVE MAP SECTION ---
+    st.markdown("### 🗺️ Nationwide Overview & Federal Hostility Index")
+    st.caption("Interaktiv US-karta med delstatlig riskgradering samt objektiv federal bedömning och exekutiv retorik.")
+
+    # Prepare map data across all states in mapping dictionary
+    map_data = []
+    for s_name in STATE_MAPPING.keys():
+        prof = get_state_profile(s_name, 2026)
+        abbr = STATE_ABBR.get(s_name, s_name[:2].upper())
+        map_data.append({
+            "State": s_name,
+            "Abbr": abbr,
+            "RiskScore": prof.get("risk_score", 50),
+            "Tier": prof.get("tier", "Gul"),
+            "Intro": prof.get("intro", 0)
+        })
+    df_map = pd.DataFrame(map_data)
+
+    map_col, fed_col = st.columns([1.6, 1])
+
+    with map_col:
+        fig_map = px.choropleth(
+            df_map,
+            locations="Abbr",
+            locationmode="USA-states",
+            color="RiskScore",
+            color_continuous_scale=[[0, "#dcfce7"], [0.5, "#fef3c7"], [1, "#fee2e2"]],
+            scope="usa",
+            hover_name="State",
+            labels={"RiskScore": "Legislative Risk Index"}
+        )
+        fig_map.update_layout(
+            height=340,
+            margin=dict(t=0, b=0, l=0, r=0),
+            coloraxis_showscale=False
+        )
+        st.plotly_chart(fig_map, use_container_width=True)
+
+    with fed_col:
+        st.markdown("#### Federal Nivå - Objektiv Bedömning")
+        st.info(
+            "**Federal Status:** Delat konstitutionellt skydd vs. växande exekutiv och legislativ polarisering. "
+            "Medan federala antidiskrimineringsprinciper kvarstår, påverkar nationell exekutiv retorik direkt det rättsliga klimatet."
+        )
+        
+        # Professionally styled blockquote with precise timestamp & sourcing
+        st.markdown(
+            """
+            <div style='border-left: 4px solid #b91c1c; padding: 8px 12px; background-color: #f9fafb; border-radius: 0 4px 4px 0;'>
+                <p style='font-style: italic; color: #1f2937; margin: 0; font-size: 0.95em;'>
+                    “As of today, it will henceforth be the official policy of the United States government that there are only two genders — male and female.”
+                </p>
+                <hr style='margin: 6px 0; border: none; border-top: 1px solid #e5e7eb;'>
+                <p style='font-size: 0.8em; color: #6b7280; margin: 0;'>
+                    <strong>Context:</strong> Official White House Executive Briefing & Statement<br>
+                    <strong>Timestamp:</strong> January 20, 2025, 12:00 PM EST
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
     st.divider()
 
     st.markdown(f"### {t['admin_header']}")

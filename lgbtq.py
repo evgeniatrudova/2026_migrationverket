@@ -16,7 +16,7 @@ except ImportError:
 # ---------------------------------------------------------
 # Configuration & Bilingual Dictionary
 # ---------------------------------------------------------
-st.set_page_config(page_title="Lifos COI", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="LQBTQ-EVelution", layout="wide", initial_sidebar_state="collapsed")
 
 I18N = {
     "sv": {
@@ -34,7 +34,7 @@ I18N = {
         "question": "Standardiserad SOGI-fråga",
         "btn_run": "Generera Underlag",
         "methodology_header": "Metodologisk Validering",
-        "methodology_text": "Denna metodologiska ram för landinformation (COI) har utvecklats och standardiserats i samarbete med forskargrupper vid Uppsala universitet, Lunds universitet och Stockholms universitet. Ramverket tillämpar rigorös källkritik och algoritmisk validering av empirisk data för att säkerställa högsta möjliga rättssäkerhet och spårbarhet i asylprövningsprocesser, i strikt enlighet med förvaltningsrättsliga beviskrav.",
+        "methodology_text": "Denna metodologiska ram för landinformation (COI) har utvecklats och standardiserats. Ramverket tillämpar rigorös källkritik och algoritmisk validering av empirisk data för att säkerställa högsta möjliga rättssäkerhet och spårbarhet i asylprövningsprocesser, i strikt enlighet med förvaltningsrättsliga beviskrav.",
         "results_header": "Analysresultat",
         "ref_header": "Referensförteckning (Validerade källor)",
         "pdf_btn": "Ladda ner PDF för Journalföring",

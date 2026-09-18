@@ -47,7 +47,7 @@ I18N = {
         "qol_header": "Socioekonomisk Livskvalitet (QoL) & IFA",
         "morbidity_header": "Intersektionell Mortalitet (95% CI)",
         "velocity_header": "Velocity of Law (Lagstiftningshastighet)",
-        "criminology_header": "Komparativ Kriminologi (USA vs. Sverige)",
+        "criminology_header": "Komparativ Kriminologi (USA vs. Sverige) mot LGBTQ",
         "results_header": "AI-Syntes: Kumulativ Förföljelsebedömning",
         "ref_header": "Referensförteckning (Validerade Källor & Register)",
         "pdf_btn": "Ladda ner Komplett Dossier (PDF)"

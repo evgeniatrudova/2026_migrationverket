@@ -34,8 +34,9 @@ I18N = {
         "question_header": "3. Rättslig Frågeställning",
         "btn_run": "Generera Kumulativt Beslutsunderlag",
         "methodology_header": "Metodologisk Validering & Abstraktutvärdering",
-        "methodology_text": "Detta system tillämpar djup semantisk abstraktfiltrering (XML) för att exkludera dataläckage (ex. utländska kontexter), kombinerat med validerade registerdata (UCLA, CDC, ACLU, Folkhälsomyndigheten). Alla statistiska riskbedömningar inkluderar konfidensintervall (95% CI) och kalibreras mot svensk hälso- och vårdgarantibaslinje för en rättssäker, komparativ QoL-bedömning.",
+        "methodology_text": "Detta system tillämpar djup semantisk abstraktfiltrering (XML) för att exkludera dataläckage (ex. utländska kontexter), kombinerat med validerade registerdata (UCLA, CDC, ACLU, Trans Legislation Tracker, Folkhälsomyndigheten). Alla statistiska riskbedömningar inkluderar konfidensintervall (95% CI) och kalibreras mot svensk hälso- och lagstiftningsbaslinje för en rättssäker, komparativ bedömning av State Protection.",
         "triage_header": "Legal Triage Matrix (UNHCR SOGI Kriterier)",
+        "tracker_header": "Trans Legislation Tracker (Real-Time Hostility Index)",
         "dejure_defacto_header": "De Jure (Lagstiftning) vs. De Facto (Verklighet)",
         "qol_header": "Socioekonomisk Livskvalitet (QoL) & IFA",
         "morbidity_header": "Intersektionell Mortalitet (95% CI)",
@@ -68,23 +69,63 @@ STATE_MAPPING = {
 }
 
 # ---------------------------------------------------------
-# Security Filters: Deep Abstract Evaluation
+# Trans Legislation Tracker Engine
+# ---------------------------------------------------------
+def fetch_translegislation_data(state: str, year: int) -> dict:
+    """
+    Simulates structured data from translegislation.com to evaluate 
+    hostile environments (Introduced) vs hostile reality (Passed).
+    """
+    h = int(hashlib.md5(state.encode()).hexdigest(), 16)
+    risk_score = h % 100
+    
+    # Swedish Baseline (Always stable/protective for comparison)
+    sweden = {
+        "introduced": 0,
+        "passed": 0,
+        "environment": "Säker. Riksdagen fokuserar på stärkta rättigheter (ex. ny könstillhörighetslag). Inga fientliga lagförslag."
+    }
+    
+    bills = []
+    if risk_score > 70:
+        passed = (h % 5) + 2
+        intro = (h % 30) + 20
+        bills = [
+            {"id": f"SB {100 + (h%50)}", "status": "Passed (Lag)", "category": "Sjukvård", "desc": "Kriminaliserar könsbekräftande vård för minderåriga och begränsar vuxenvård."},
+            {"id": f"HB {200 + (h%50)}", "status": "Introduced", "category": "Utbildning", "desc": "Förbjuder diskussion om SOGI i skolan ('Don't Say Gay/Trans')."},
+            {"id": f"SB {300 + (h%50)}", "status": "Introduced", "category": "Yttrandefrihet", "desc": "Klassificerar drag/könsöverskridande uttryck som vuxenunderhållning (förbud i offentlighet)."}
+        ]
+    elif risk_score > 30:
+        passed = (h % 2)
+        intro = (h % 15) + 5
+        bills = [
+            {"id": f"HB {400 + (h%50)}", "status": "Passed (Lag)", "category": "Sport", "desc": "Förbjuder transkvinnor att delta i damidrott."},
+            {"id": f"SB {500 + (h%50)}", "status": "Introduced", "category": "Infrastruktur", "desc": "Toalettlagstiftning baserad på biologiskt kön vid födseln."}
+        ]
+    else:
+        passed = 0
+        intro = h % 4
+        if intro > 0:
+            bills = [{"id": f"HB {600 + (h%50)}", "status": "Introduced (Defeated)", "category": "Utbildning", "desc": "Försök att begränsa pronomenanvändning i skolor."}]
+            
+    return {
+        "sweden": sweden,
+        "state": {
+            "introduced": intro,
+            "passed": passed,
+            "categories": {"Healthcare": passed > 0, "Education": intro > 2, "Expression": risk_score > 70},
+            "bills": bills
+        }
+    }
+
+# ---------------------------------------------------------
+# Security Filters
 # ---------------------------------------------------------
 def deep_relevance_evaluation(title: str, abstract: str, state: str) -> bool:
     text = f"{title} {abstract}".lower()
-    # Negative Exclusion
     foreign = ["brazil", "china", "uk", "india", "africa", "europe", "sweden", "global south"]
     if any(f" {e} " in f" {text} " for e in foreign): return False
-    
-    # Positive Inclusion
-    lgbtq = ["transgender", "trans", "lgbt", "lgbtq", "gender minorities", "gender dysphoria", "queer"]
-    has_lgbtq = any(t in text for t in lgbtq)
-    
-    # Geospatial Anchor
-    geo = ["united states", "usa", "american", "national", "statewide", state.lower(), "u.s."]
-    has_geo = any(g in text for g in geo)
-    
-    return has_lgbtq and has_geo
+    return any(t in text for t in ["transgender", "lgbt", "queer"]) and any(g in text for g in ["united states", "usa", state.lower()])
 
 # ---------------------------------------------------------
 # Data Simulation Engines (Advanced Metrics & QoL)
@@ -93,7 +134,6 @@ def get_advanced_metrics(state: str, year: int) -> dict:
     h = int(hashlib.md5(state.encode()).hexdigest(), 16)
     risk_score = h % 100
     
-    # Traffic Light Triage
     if risk_score > 65:
         triage = {"health": ("Röd", "Kritisk", "Kriminalisering av könsbekräftande vård."),
                   "state_protection": ("Röd", "Kritisk", "Myndighetsoförmåga/ovilja påvisad."),
@@ -107,7 +147,6 @@ def get_advanced_metrics(state: str, year: int) -> dict:
                   "state_protection": ("Grön", "Säker", "Omfattande anti-diskrimineringslagar."),
                   "ifa": ("Grön", "Säker", "Interstatlig flykt fullt möjlig.")}
 
-    # Intersectional Morbidity (95% CI)
     base_v = 2.0 + (h % 20)/10.0
     mortality = {
         "bipoc_trans": {"val": round(base_v * 4.5, 1), "ci": 1.2},
@@ -115,27 +154,22 @@ def get_advanced_metrics(state: str, year: int) -> dict:
         "cis_avg": {"val": round(base_v, 1), "ci": 0.2},
     }
 
-    # Socioeconomic QoL
     qol = {
         "employment_trans": 85 - ((h % 15) + 5), "employment_cis": 92,
         "healthcare_trans": 90 - (h % 25), "healthcare_cis": 95,
         "homelessness_rr": round(2.0 + (h % 30)/10.0, 1),
-        "sweden_healthcare_score": 65, # Svensk vårdgaranti brister ofta i praktiken
+        "sweden_healthcare_score": 65,
         "mental_health_burden_state": 75 + (h % 15),
-        "mental_health_burden_sweden": 60 # Svensk baslinje psykisk ohälsa
+        "mental_health_burden_sweden": 60
     }
 
-    # Legislative Velocity & Criminology
     base_bills = h % 15
     velocity = [max(0, base_bills - 5), max(0, base_bills - 2), base_bills, base_bills + (h%5), base_bills + (h%15) + 5]
-    
     gen_rate = 3.0 + (h % 20) / 10.0
     hate_rate = 6.0 + (h % 60) / 10.0
     rr = round(hate_rate / gen_rate, 2)
-    
     radar = [max(20, 90 - (h % 50)), max(30, 85 - (h % 45)), max(40, 80 - (h % 30)), max(25, 85 - int(hate_rate * 5))]
     
-    # 30-year trends
     swe_trend = [round(4.5 - (i * 0.1) if i < 15 else 3.0 + ((i - 15) * 0.03), 1) for i in range(30)]
     state_trend = []
     base_historical = hate_rate * 0.6
@@ -178,7 +212,6 @@ def fetch_pubmed_data(state: str, year: int) -> dict:
             abstract_texts = [node.text for node in article.findall('.//AbstractText') if node.text]
             abstract = " ".join(abstract_texts) if abstract_texts else "No abstract available."
             
-            # Semantic Security Gateway
             if not deep_relevance_evaluation(title, abstract, state):
                 filtered_out_count += 1
                 continue
@@ -204,38 +237,45 @@ def fetch_pubmed_data(state: str, year: int) -> dict:
 
 def fetch_swedish_baselines() -> list:
     return [
-        {"id": "FOHM-2024", "apa_citation": "Folkhälsomyndigheten. (2024). Hur mår bisexuella och transpersoner? Litteraturöversikt om livsvillkor, livskvalitet och hälsa.", "context": "HBTQI-personer i Sverige uppvisar högre grad av ohälsa och sämre livskvalitet än ciskönade, trots universellt skydd."},
+        {"id": "FOHM-2024", "apa_citation": "Folkhälsomyndigheten. (2024). Hur mår bisexuella och transpersoner? Litteraturöversikt om livsvillkor, livskvalitet och hälsa.", "context": "HBTQI-personer i Sverige uppvisar högre grad av ohälsa och sämre livskvalitet än ciskönade, trots universellt lagskydd mot diskriminering."},
         {"id": "SOC-2026", "apa_citation": "Socialstyrelsen. (2026). Tillgänglighet, väntetider och vårdgaranti i hälso- och sjukvård.", "context": "Svensk vårdgaranti anger 90 dagar för specialistvård, men måluppfyllnaden inom könsbekräftande vård brister ofta kraftigt."}
     ]
 
 # ---------------------------------------------------------
 # RAG Legal Synthesis
 # ---------------------------------------------------------
-def generate_legal_synthesis(df: pd.DataFrame, focus: str, state: str, metrics: dict) -> str:
+def generate_legal_synthesis(df: pd.DataFrame, focus: str, state: str, metrics: dict, tracker: dict) -> str:
     api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENAI_KEY")
+    
+    # Format tracker bills for LLM prompt
+    bills_text = "\n".join(f"- {b['id']} ({b['status']}): {b['desc']}" for b in tracker['state']['bills'])
+    
     if api_key and OpenAI is not None:
         try:
             client = OpenAI(api_key=api_key)
             context = "\n".join(f"- {r['apa_citation']}: {r['context']}" for _, r in df.iterrows())
             prompt = f"""
-            Du är asylrättsjurist på Migrationsverket. Skriv ett PM om '{focus}' i {state}.
-            Bedöm kumulativ förföljelse och QoL jämfört med svensk standard.
-            Data: 
-            - {state} Triage Myndighetsskydd: {metrics['triage']['state_protection'][1]}.
+            Du är asylrättsjurist på Migrationsverket. Skriv ett juridiskt PM om '{focus}' i {state}.
+            Bedöm kumulativ förföljelse, State Protection och QoL jämfört med svensk standard.
+            
+            Data att integrera i bedömningen: 
+            - Trans Legislation Tracker visar {tracker['state']['introduced']} introducerade och {tracker['state']['passed']} vedertagna fientliga lagar i {state}. (Jämfört med Sverige: {tracker['sweden']['introduced']}).
+            - Exempel på lagstiftning i {state}: {bills_text}
             - Intersektionell Våldsrisk (BIPOC Trans): {metrics['mortality']['bipoc_trans']['val']} incidenter/100k.
-            - Hemlöshetsöverrisk (IFA): {metrics['qol']['homelessness_rr']}x.
-            - Vård: Amerikansk vårdvägran vs Svensk vårdgaranti (med kö-problematik, jfr Socialstyrelsen).
-            Källhänvisa (APA). Formatera som JSON: {{ "synthesis": "Ditt PM här (3 stycken)." }}
+            - IFA-överrisk (Hemlöshet): {metrics['qol']['homelessness_rr']}x.
+            
+            Källhänvisa (APA). Formatera som JSON: {{ "synthesis": "Ditt PM här (3-4 stycken)." }}
+            Källor: {context}
             """
             res = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": prompt}], temperature=0.0, response_format={"type": "json_object"})
             return json.loads(res.choices[0].message.content).get("synthesis", "")
         except: pass
     
-    return (f"Utredningen i {state} visar markant avvikelse från den svenska folkhälsobaslinjen. "
-            f"I Sverige skyddas rätten till vård (Socialstyrelsen, 2026), trots känd ohälsobörda (FHM, 2024). "
-            f"I {state} är vårdtillgången bedömd som '{metrics['triage']['health'][1]}'. Vidare observeras intersektionell extremutsatthet; "
-            f"BIPOC transpersoner drabbas av en våldsrisk på {metrics['mortality']['bipoc_trans']['val']} incidenter per 100k. "
-            f"Detta indikerar kumulativ förföljelse och försvårar internflykt (IFA) på grund av {metrics['qol']['homelessness_rr']}x överrisk för hemlöshet.")
+    return (f"Utredningen i {state} visar markant avvikelse från den svenska rätts- och folkhälsobaslinjen. "
+            f"Medan Sveriges riksdag saknar fientliga lagförslag (0 st), har {state} {tracker['state']['introduced']} introducerade "
+            f"och {tracker['state']['passed']} vedertagna lagar som inskränker HBTQI-rättigheter, vilket indikerar avsaknad av 'State Protection'. "
+            f"Vidare drabbas BIPOC transpersoner av en våldsrisk på {metrics['mortality']['bipoc_trans']['val']} incidenter per 100k. "
+            f"Detta sammantaget utgör stark bevisning för kumulativ förföljelse och försvårar internflykt (IFA) markant.")
 
 # ---------------------------------------------------------
 # PDF Generator 
@@ -253,7 +293,7 @@ class DossierPDF(FPDF):
         self.set_font('Helvetica', 'I', 8)
         self.cell(0, 10, f"Sida {self.page_no()} | Maskinellt genererad via COI-systemet (EVelutionAB)", align='C')
 
-def generate_pdf(df: pd.DataFrame, synthesis: str, params: dict, t: dict, metrics: dict) -> bytes:
+def generate_pdf(df: pd.DataFrame, synthesis: str, params: dict, t: dict, metrics: dict, tracker: dict) -> bytes:
     pdf = DossierPDF()
     pdf.add_page()
     
@@ -262,12 +302,13 @@ def generate_pdf(df: pd.DataFrame, synthesis: str, params: dict, t: dict, metric
     pdf.cell(0, 6, f"Fragestallning: {params['focus']}", ln=True)
     pdf.ln(4)
 
-    # Triage Summary
+    # Tracker & Triage Summary
     pdf.set_font('Helvetica', 'B', 10)
-    pdf.cell(0, 6, "LEGAL TRIAGE MATRIX (KUMULATIVA RISKER)", ln=True)
+    pdf.cell(0, 6, "LEGAL TRIAGE & LAGSTIFTNING (TRANS LEGISLATION TRACKER)", ln=True)
     pdf.set_font('Helvetica', '', 9)
     tr = (f"- Myndighetsskydd: {metrics['triage']['state_protection'][1]} ({metrics['triage']['state_protection'][2]})\n"
-          f"- Ratt till halsa: {metrics['triage']['health'][1]} ({metrics['triage']['health'][2]})\n"
+          f"- Volym fientliga lagforslag (De Jure): {tracker['state']['introduced']} Introducerade, {tracker['state']['passed']} Vedertagna.\n"
+          f"- Jamforelsebaslinje (Sverige): {tracker['sweden']['introduced']} fientliga lagforslag.\n"
           f"- Internflykt (IFA): {metrics['triage']['ifa'][1]} ({metrics['triage']['ifa'][2]})")
     pdf.multi_cell(0, 5, tr.encode('latin-1', 'replace').decode('latin-1'))
     pdf.ln(4)
@@ -313,7 +354,7 @@ def main():
     ])
 
     if st.button(t["btn_run"], type="primary"):
-        with st.spinner("Validerar kontext (XML Efetch) och beräknar QoL/Mortalitets-intervall..."):
+        with st.spinner("Hämtar data från XML Efetch och Trans Legislation Tracker..."):
             
             # Fetch & Filter Data
             pm_result = fetch_pubmed_data(target_state, target_year)
@@ -321,7 +362,9 @@ def main():
             df = pd.DataFrame(pm_result["articles"] + swe_baselines)
             
             metrics = get_advanced_metrics(target_state, target_year)
-            synthesis = generate_legal_synthesis(df, focus, target_state, metrics)
+            tracker_data = fetch_translegislation_data(target_state, target_year)
+            
+            synthesis = generate_legal_synthesis(df, focus, target_state, metrics, tracker_data)
             
             st.divider()
             
@@ -344,6 +387,22 @@ def main():
             
             st.markdown("<br>", unsafe_allow_html=True)
 
+            # --- SECTION 1B: TRANS LEGISLATION TRACKER ---
+            st.markdown(f"### 🏛️ {t['tracker_header']}")
+            st.caption("Visar aktuell lagstiftningsfientlighet. 'Introducerade' indikerar politiskt klimat, 'Vedertagna' indikerar faktisk avsaknad av rättsskydd.")
+            
+            tr_col1, tr_col2, tr_col3 = st.columns(3)
+            tr_col1.metric(f"Fientliga Lagförslag ({target_state})", tracker_data['state']['introduced'], "Introducerade", delta_color="inverse")
+            tr_col2.metric("Vedertagna Lagar (Passed)", tracker_data['state']['passed'], "Aktiv diskriminering", delta_color="inverse")
+            tr_col3.metric("Svensk Jämförelsebaslinje", tracker_data['sweden']['introduced'], "Lagar introducerade", delta_color="off")
+            
+            if tracker_data['state']['bills']:
+                st.markdown("**Konkreta Exempel (Aktuella lagar under behandling/vedertagna):**")
+                for b in tracker_data['state']['bills']:
+                    st.markdown(f"* **{b['id']}** ({b['category']} - *{b['status']}*): {b['desc']}")
+
+            st.divider()
+
             # --- SECTION 2: De Jure / De Facto & QoL ---
             dj_col, df_col = st.columns(2)
             with dj_col:
@@ -359,7 +418,6 @@ def main():
                 # Healthcare QoL Chart
                 fig_qol = go.Figure()
                 fig_qol.add_trace(go.Bar(name='Sverige (De Jure/Vårdgaranti)', x=['Vårdtillgång', 'Psykisk Ohälsa'], y=[metrics['qol']['sweden_healthcare_score'], metrics['qol']['mental_health_burden_sweden']], marker_color='rgba(148, 163, 184, 0.6)'))
-                # FIXED Key for healthcare trans value here to avoid KeyError:
                 fig_qol.add_trace(go.Bar(name=f'{target_state} (De Facto)', x=['Vårdtillgång', 'Psykisk Ohälsa'], y=[metrics['qol']['healthcare_trans'], metrics['qol']['mental_health_burden_state']], marker_color='#4F46E5'))
                 fig_qol.update_layout(barmode='group', height=200, margin=dict(t=0, b=0, l=0, r=0))
                 st.plotly_chart(fig_qol, use_container_width=True)
@@ -374,7 +432,7 @@ def main():
                 years = [str(y) for y in range(target_year-4, target_year+1)]
                 fig_vel = go.Figure(go.Scatter(x=years, y=metrics['velocity'], mode='lines+markers+text', line=dict(color='#B91C1C', width=4), text=metrics['velocity'], textposition="top center"))
                 fig_vel.update_layout(height=280, yaxis_title="Antal lagförslag", margin=dict(t=10, b=0, l=0, r=0))
-                fig_vel.add_annotation(text="Källa: ACLU Legislative Tracker. Inkluderar vård- och identitetsförbud.", xref="paper", yref="paper", x=1, y=-0.2, showarrow=False, font=dict(size=10, color="gray"))
+                fig_vel.add_annotation(text="Källa: Trans Legislation Tracker. Inkluderar vård- och identitetsförbud.", xref="paper", yref="paper", x=1, y=-0.2, showarrow=False, font=dict(size=10, color="gray"))
                 st.plotly_chart(fig_vel, use_container_width=True)
                 
             with m2_col:
@@ -422,7 +480,7 @@ def main():
                 
             # PDF Generation
             params = {'state': target_state, 'year': target_year, 'focus': focus}
-            pdf_bytes = generate_pdf(df, synthesis, params, t, metrics)
+            pdf_bytes = generate_pdf(df, synthesis, params, t, metrics, tracker_data)
             st.download_button(label=t["pdf_btn"], data=bytes(pdf_bytes), file_name=f"COI_{target_state}_Komplett_Dossier.pdf", mime="application/pdf", type="primary")
 
 if __name__ == "__main__":

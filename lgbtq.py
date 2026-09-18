@@ -17,11 +17,11 @@ except ImportError:
 # ---------------------------------------------------------
 # Configuration & Bilingual Dictionary
 # ---------------------------------------------------------
-st.set_page_config(page_title="Lifos COI: QoL & Kumulativ Bedömning", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="LGBTQ-EVelution", layout="wide", initial_sidebar_state="collapsed")
 
 I18N = {
     "sv": {
-        "title": "Landinformation (COI) - Kumulativ Bedömning & Livskvalitet",
+        "title": " US UTVÄRDERING",
         "legal_warning": "RÄTTSLIGT MEDDELANDE: AI-verktyget är licensierat av EVelutionAB. Tillfällig användning gäller vid utvärdering.",
         "admin_header": "1. Ärendeuppgifter",
         "case_num": "Ärendenummer",

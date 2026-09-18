@@ -63,7 +63,6 @@ def fetch_pubmed_data(state: str, year: int) -> list:
             item = sum_res.get(pmid, {})
             title = item.get("title", "Unknown").rstrip(".")
             
-            # Heuristic thematic tagging for graphing
             t_lower = title.lower()
             if any(k in t_lower for k in ["resilien", "protect", "support"]):
                 theme = "Resiliens / Skyddsfaktorer"
@@ -106,7 +105,6 @@ def fetch_human_rights_data(state: str, year: int) -> list:
     ]
 
 def calculate_criminological_risk(state: str) -> dict:
-    """Calculates structural risk delta and relative risk metrics."""
     baselines = {
         "California": {"gen_rate": 4.4, "hate_rate": 8.1, "rr": 1.84, "level": "Förhöjd"},
         "Texas": {"gen_rate": 4.3, "hate_rate": 11.2, "rr": 2.60, "level": "Kritisk"},
@@ -167,7 +165,7 @@ def generate_legal_synthesis(df: pd.DataFrame, focus: str) -> dict:
     }
 
 # ---------------------------------------------------------
-# PDF Generator with Embedded Charts
+# PDF Generator with Safe Fallback for Charts
 # ---------------------------------------------------------
 class DossierPDF(FPDF):
     def __init__(self, case_number, officer_id, decision_maker_id):
@@ -208,18 +206,20 @@ def generate_pdf(df: pd.DataFrame, ai_data: dict, params: dict, risk_data: dict,
     pdf.multi_cell(0, 5, "RÄTTSLIG FRISKRIVNING: Denna rapport innehåller maskinsyntetiserad text och kvantitativ riskanalys. Utlåtandet utgör inte ett slutgiltigt myndighetsbeslut. Undertecknande bär det rättsliga ansvaret.", fill=True)
     pdf.ln(4)
 
-    # 1. Quantitative Evaluation & Charts
+    # 1. Quantitative Evaluation & Metrics
     pdf.set_font('Helvetica', 'B', 12)
     pdf.cell(0, 7, "1. Kvantitativ Risk- och Temautvärdering", ln=True)
     pdf.set_font('Helvetica', '', 9)
     pdf.cell(0, 5, f"Relativ Risk (RR) för riktat hatbrott: {risk_data['rr']}x (Hotnivå: {risk_data['level']})", ln=True)
     pdf.ln(2)
     
-    # Insert chart image into PDF
     if chart_image_bytes:
-        image_file = io.BytesIO(chart_image_bytes)
-        pdf.image(image_file, x=15, w=180)
-        pdf.ln(4)
+        try:
+            image_file = io.BytesIO(chart_image_bytes)
+            pdf.image(image_file, x=15, w=180)
+            pdf.ln(4)
+        except Exception:
+            pass
 
     # 2. Synthesis
     pdf.set_font('Helvetica', 'B', 12)
@@ -302,7 +302,6 @@ def main():
                 
             ai_data = generate_legal_synthesis(df, final_focus)
             
-            # Save session state for rendering & PDF export
             st.session_state['df'] = df
             st.session_state['risk_data'] = risk_data
             st.session_state['ai_data'] = ai_data
@@ -314,7 +313,6 @@ def main():
                 'dbs': databases
             }
 
-    # Render results if present in session state
     if 'df' in st.session_state and not st.session_state['df'].empty:
         df = st.session_state['df']
         risk_data = st.session_state['risk_data']
@@ -324,15 +322,11 @@ def main():
         st.success("Beslutsunderlag och utvärderingsparametrar genererade.")
         st.markdown("---")
 
-        # -----------------------------------------------------
-        # RESTORED: Academic & Risk Evaluation Graphs
-        # -----------------------------------------------------
         st.subheader("📊 Kvantitativa Utvärderingsparametrar")
         
         g1, g2 = st.columns(2)
         
         with g1:
-            # Graph 1: Criminological Risk Delta (Bar Chart)
             fig_risk = go.Figure(data=[
                 go.Bar(name='Allmän Våldsbrottslighet (Gen Pop)', x=[target_state], y=[risk_data['gen_rate']], marker_color='#94A3B8'),
                 go.Bar(name='Riktat Våld mot HBTQI (Targeted)', x=[target_state], y=[risk_data['hate_rate']], marker_color='#EF4444')
@@ -347,7 +341,6 @@ def main():
             st.plotly_chart(fig_risk, use_container_width=True)
 
         with g2:
-            # Graph 2: Thematic Distribution of Extracted Corpus (Pie/Donut Chart)
             theme_counts = df['theme'].value_counts().reset_index()
             theme_counts.columns = ['Tema', 'Antal']
             fig_theme = px.pie(
@@ -361,8 +354,12 @@ def main():
             fig_theme.update_layout(height=320, margin=dict(t=40, b=0, l=0, r=0))
             st.plotly_chart(fig_theme, use_container_width=True)
 
-        # Capture static image of Graph 1 for PDF inclusion
-        chart_bytes = fig_risk.to_image(format="png", width=600, height=300, scale=2)
+        # Safely attempt to generate static image bytes for PDF without crashing if Kaleido is missing
+        chart_bytes = None
+        try:
+            chart_bytes = fig_risk.to_image(format="png", width=600, height=300, scale=2)
+        except Exception:
+            chart_bytes = None
 
         st.markdown("---")
         st.subheader("Granskning av Tjänsteutlåtande")
@@ -371,7 +368,6 @@ def main():
         st.subheader("Referenslista (Validerade Källor)")
         st.dataframe(df[['id', 'title', 'source', 'theme']], use_container_width=True)
         
-        # PDF Generation with Embedded Chart
         pdf_bytes = generate_pdf(df, ai_data, params, risk_data, chart_bytes)
         
         st.download_button(

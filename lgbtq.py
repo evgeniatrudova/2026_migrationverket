@@ -386,7 +386,6 @@ def main():
     st.markdown("### 🗺️ Nationwide Overview & Federal Hostility Index")
     st.caption("Interaktiv US-karta med delstatlig riskgradering samt objektiv federal bedömning och exekutiv retorik.")
 
-    # Prepare map data across all states in mapping dictionary
     map_data = []
     for s_name in STATE_MAPPING.keys():
         prof = get_state_profile(s_name, 2026)
@@ -427,28 +426,28 @@ def main():
             "Medan federala antidiskrimineringsprinciper kvarstår, påverkar nationell exekutiv retorik direkt det rättsliga klimatet."
         )
         
-st.markdown(
-        """
-        <div style='border-left: 4px solid #b91c1c; padding: 10px 14px; background-color: #f9fafb; border-radius: 0 4px 4px 0; margin-bottom: 12px;'>
-            <p style='font-style: italic; color: #1f2937; margin: 0 0 6px 0; font-size: 0.9em; line-height: 1.4;'>
-                “I will end the government policy of trying to socially engineer race and gender into every aspect of public and private life. We will forge a society that is colorblind and merit based. As of today, it will henceforth be the official policy of the United States government that there are only two genders — male and female.”
-            </p>
-            <p style='font-size: 0.78em; color: #6b7280; margin: 0 0 10px 0;'>
-                <strong>Donald Trump</strong> — Official Policy & Statement | <strong>Timestamp:</strong> January 20, 2025, 12:00 PM EST
-            </p>
-            
-            <hr style='margin: 8px 0; border: none; border-top: 1px solid #e5e7eb;'>
-            
-            <p style='font-style: italic; color: #1f2937; margin: 6px 0; font-size: 0.9em; line-height: 1.4;'>
-                “I will sign a new executive order instructing every federal agency to cease all programs that promote the concept of sex and gender transition at any age... I will ask Congress to pass a bill establishing that the only genders recognized by the United States government are male and female, as determined at birth.”
-            </p>
-            <p style='font-size: 0.78em; color: #6b7280; margin: 0;'>
-                <strong>Donald Trump</strong> — Agenda 47 Policy Series | <strong>Timestamp:</strong> Campaign Release (2023–2024)
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+        st.markdown(
+            """
+            <div style='border-left: 4px solid #b91c1c; padding: 10px 14px; background-color: #f9fafb; border-radius: 0 4px 4px 0; margin-bottom: 12px;'>
+                <p style='font-style: italic; color: #1f2937; margin: 0 0 6px 0; font-size: 0.9em; line-height: 1.4;'>
+                    “I will end the government policy of trying to socially engineer race and gender into every aspect of public and private life. We will forge a society that is colorblind and merit based. As of today, it will henceforth be the official policy of the United States government that there are only two genders — male and female.”
+                </p>
+                <p style='font-size: 0.78em; color: #6b7280; margin: 0 0 10px 0;'>
+                    <strong>Donald Trump</strong> — Official Policy & Statement | <strong>Timestamp:</strong> January 20, 2025, 12:00 PM EST
+                </p>
+                
+                <hr style='margin: 8px 0; border: none; border-top: 1px solid #e5e7eb;'>
+                
+                <p style='font-style: italic; color: #1f2937; margin: 6px 0; font-size: 0.9em; line-height: 1.4;'>
+                    “I will sign a new executive order instructing every federal agency to cease all programs that promote the concept of sex and gender transition at any age... I will ask Congress to pass a bill establishing that the only genders recognized by the United States government are male and female, as determined at birth.”
+                </p>
+                <p style='font-size: 0.78em; color: #6b7280; margin: 0;'>
+                    <strong>Donald Trump</strong> — Agenda 47 Policy Series | <strong>Timestamp:</strong> Campaign Release (2023–2024)
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     st.divider()
 

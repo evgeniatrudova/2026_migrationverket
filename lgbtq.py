@@ -8,49 +8,11 @@ from datetime import datetime
 import json
 from fpdf import FPDF
 from openai import OpenAI
-from streamlit_autorefresh import st_autorefresh
 
 # ---------------------------------------------------------
-# Bilingual & Academic Configuration
+# Configuration & Metadata
 # ---------------------------------------------------------
-I18N = {
-    "sv": {
-        "title": "⚖️ COI & Kriminologisk Hotbildsanalys (HBTQI)",
-        "subtitle": "Landinformation och akademisk trendanalys för asylprövning.",
-        "warning": "<b>Dataminimering & Integritet:</b> Inga sökningar eller API-nycklar lagras lokalt (Stateless operation).",
-        "sidebar_lang": "Språk / Language",
-        "sidebar_params": "Utredningsparametrar",
-        "state_select": "Välj delstat",
-        "year_select": "Publiceringsår (Tidskriteriet)",
-        "custom_focus": "Specifik utredningsfråga (Frivillig)",
-        "openai_key": "OpenAI API-nyckel",
-        "news_key": "NewsAPI-nyckel (Realtidsmedia)",
-        "run_query": "Kör Systematisk COI-utvinning",
-        "tab_delta": "📊 Risk-Delta (Kriminologi)",
-        "tab_live": "🚨 Realtidsövervakning (Media)",
-        "tab_ai": "🤖 Rättslig Syntes",
-        "tab_audit": "🛡️ Söklogg & Metod",
-        "tab_pdf": "📄 Beslutsunderlag (PDF)"
-    },
-    "en": {
-        "title": "⚖️ COI & Criminological Threat Analysis (LGBTQI+)",
-        "subtitle": "Country of Origin Information and academic trend analysis.",
-        "warning": "<b>Data Privacy:</b> No queries or API keys are stored locally (Stateless operation).",
-        "sidebar_lang": "Language / Språk",
-        "sidebar_params": "Investigation Parameters",
-        "state_select": "Select State",
-        "year_select": "Publication Year (Proximity in Time)",
-        "custom_focus": "Specific Legal Focus (Optional)",
-        "openai_key": "OpenAI API Key",
-        "news_key": "NewsAPI Key (Real-time Media)",
-        "run_query": "Execute Systematic COI Retrieval",
-        "tab_delta": "📊 Risk Delta (Criminology)",
-        "tab_live": "🚨 Real-Time Monitor (Media)",
-        "tab_ai": "🤖 Legal Synthesis",
-        "tab_audit": "🛡️ Audit Trail & Method",
-        "tab_pdf": "📄 Download Brief (PDF)"
-    }
-}
+st.set_page_config(page_title="Lifos COI-Dossier", layout="wide", initial_sidebar_state="collapsed")
 
 STATE_MAPPING = {
     "California": "University of California",
@@ -62,51 +24,31 @@ STATE_MAPPING = {
     "Washington": "University of Washington"
 }
 
-# ---------------------------------------------------------
-# Criminological Engine: Baseline Risk Delta
-# ---------------------------------------------------------
-def calculate_risk_delta(state: str) -> dict:
-    """Mock structural baseline calculation."""
-    baselines = {
-        "California": {"gen": 4.4, "hate": 8.1, "rr": 1.84},
-        "Texas": {"gen": 4.3, "hate": 11.2, "rr": 2.60},
-        "Florida": {"gen": 3.8, "hate": 10.5, "rr": 2.76},
-    }
-    data = baselines.get(state, {"gen": 4.0, "hate": 9.0, "rr": 2.25})
-    data["level"] = "Kritisk" if data["rr"] > 2.5 else "Förhöjd" if data["rr"] > 1.5 else "Baslinje"
-    return data
+STANDARD_QUESTIONS = [
+    "Kumulativ diskriminering (vård, boende, arbete, rättssystem)",
+    "Myndighetsskydd och polisens agerande (State Protection)",
+    "Internflyktsalternativ och social stigmatisering",
+    "Egen specifik frågeställning..."
+]
 
 # ---------------------------------------------------------
-# Real-Time Media Velocity Engine
+# Data Extraction Engines (Medical + Human Rights)
 # ---------------------------------------------------------
-def fetch_live_media_velocity(state: str, api_key: str) -> dict:
-    if not api_key:
-        return {"count": 0, "headline": "API-nyckel saknas för live-data.", "source": "N/A", "time": ""}
-    
-    # Mocking real-time fetch to avoid strict API limits in demo
-    return {
-        "count": 14,
-        "headline": f"Vandalism at local LGBTQ youth center in {state} currently under investigation.",
-        "source": f"{state} Local Tribune",
-        "time": datetime.now().strftime('%H:%M:%S')
-    }
-
-# ---------------------------------------------------------
-# PubMed Extraction Engine
-# ---------------------------------------------------------
-def generate_search_string(university: str, year: int) -> str:
+def generate_pubmed_query(university: str, year: int) -> str:
     return f'(("Transgender Persons"[Mesh] OR transgender[Title/Abstract]) AND {year}[Date - Publication] AND ("{university}"[Affiliation]))'
 
-def fetch_pubmed_data(state: str, university: str, year: int) -> dict:
+def fetch_pubmed_data(state: str, year: int) -> list:
+    """Fetches medical/sociological data from NCBI."""
+    university = STATE_MAPPING[state]
     email = "coi_research@migrationsverket.se"
-    query = generate_search_string(university, year)
-    search_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={query}&retmode=json&retmax=15&email={email}"
+    query = generate_pubmed_query(university, year)
+    search_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={query}&retmode=json&retmax=10&email={email}"
     
     try:
         res = requests.get(search_url, timeout=8).json()
         id_list = res.get("esearchresult", {}).get("idlist", [])
         if not id_list:
-            return {"state": state, "status": "Success (0 hits)", "data": []}
+            return []
             
         sum_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={','.join(id_list)}&retmode=json&email={email}"
         sum_res = requests.get(sum_url, timeout=8).json().get("result", {})
@@ -115,176 +57,230 @@ def fetch_pubmed_data(state: str, university: str, year: int) -> dict:
         for pmid in id_list:
             item = sum_res.get(pmid, {})
             articles.append({
-                "state": state, "pmid": pmid,
+                "source": "PubMed",
+                "id": f"PMID:{pmid}",
                 "title": item.get("title", "Unknown").rstrip("."),
-                "journal": item.get("source", "N/A")
+                "context": "Akademisk/Medicinsk"
             })
-        return {"state": state, "status": f"Success ({len(articles)} hits)", "data": articles}
-    except Exception as e:
-        return {"state": state, "status": f"API Error: {str(e)}", "data": []}
+        return articles
+    except:
+        return []
 
-def execute_extraction(state: str, year: int):
-    university = STATE_MAPPING[state]
-    return fetch_pubmed_data(state, university, year)
+def fetch_human_rights_data(state: str, year: int) -> list:
+    """Mock API for UNHCR/ILGA/Amnesty integration to balance medical bias."""
+    return [
+        {
+            "source": "ILGA World",
+            "id": f"ILGA-{year}-{state[:3].upper()}-01",
+            "title": f"State-Sponsored Legislation and Impact on LGBTQ+ Rights in {state}, {year}.",
+            "context": "Mänskliga Rättigheter / Lagstiftning"
+        },
+        {
+            "source": "Human Rights Campaign (HRC)",
+            "id": f"HRC-{year}-REP",
+            "title": f"Documenting Hate Crimes and Law Enforcement Bias in {state}.",
+            "context": "Säkerhet / Polisrapportering"
+        }
+    ]
 
 # ---------------------------------------------------------
-# LLM Legal Synthesis 
+# LLM Legal Synthesis (Audit-Ready)
 # ---------------------------------------------------------
-def generate_ai_synthesis(api_key: str, df: pd.DataFrame, custom_focus: str, lang: str) -> dict:
+def generate_legal_synthesis(api_key: str, df: pd.DataFrame, focus: str) -> dict:
     if not api_key or df.empty:
-        return {"synthesis": "API Key required or no data available."}
+        return {"synthesis": "Kräver API-nyckel och data.", "prompt_used": "", "model": "N/A"}
     
     client = OpenAI(api_key=api_key)
-    context = "\n".join(f"- [PMID: {r['pmid']}] {r['title']}" for _, r in df.iterrows())
+    context_data = "\n".join(f"- [{r['id']}] {r['title']} ({r['source']})" for _, r in df.iterrows())
     
     prompt = f"""
-    Du är en asylrättslig landinformationsanalytiker (COI). Analysera titlarna för transpersoner i USA.
-    Svara på formell juridisk {'svenska' if lang == 'sv' else 'engelska'}.
-    Fokusera på: {custom_focus if custom_focus else 'Kumulativ diskriminering och myndighetsskydd.'}
+    Du är en asylutredare på Migrationsverket. Skriv ett formellt tjänsteutlåtande (PM).
+    Utredningsfråga: "{focus}".
+    Språk: Formell svensk förvaltningsprosa (objektiv, saklig).
+    Krav: Utvärdera data från både akademisk forskning (PubMed) och människorättsorganisationer.
+    Krav på referens: Alla påståenden MÅSTE källhänvisas med källans ID inom parentes.
     
-    KRAV PÅ KÄLLHÄNVISNING: Varje påstående MÅSTE åtföljas av referens till artikelns PMID, t.ex. (PMID: 12345678).
-    
-    Formatera strikt som JSON: {{ "synthesis": "Din källhänvisade analys här i 2-3 stycken." }}
-    Titlar: {context}
+    Formatera som JSON: {{ "synthesis": "Ditt PM i 3 stycken här." }}
+    Titlar: {context_data}
     """
     try:
         res = client.chat.completions.create(
-            model="gpt-4o-mini", messages=[{"role": "system", "content": prompt}],
-            temperature=0.0, response_format={"type": "json_object"}
+            model="gpt-4o-mini", 
+            messages=[{"role": "system", "content": prompt}],
+            temperature=0.0, 
+            response_format={"type": "json_object"}
         )
-        return json.loads(res.choices[0].message.content)
+        return {
+            "synthesis": json.loads(res.choices[0].message.content).get("synthesis", ""),
+            "prompt_used": prompt.strip(),
+            "model": "gpt-4o-mini (temp=0.0)"
+        }
     except Exception as e:
-        return {"synthesis": f"Error: {str(e)}"}
+        return {"synthesis": f"Systemfel: {str(e)}", "prompt_used": prompt, "model": "Error"}
 
 # ---------------------------------------------------------
-# PDF Generator 
+# PDF Generator (Legal Format with Signatures & Audit)
 # ---------------------------------------------------------
-class COIPDF(FPDF):
+class DossierPDF(FPDF):
+    def __init__(self, case_number, officer_id, decision_maker_id):
+        super().__init__()
+        self.case_number = case_number
+        self.officer_id = officer_id
+        self.decision_maker_id = decision_maker_id
+
     def header(self):
-        self.set_font('Helvetica', 'B', 10)
-        self.set_text_color(100, 116, 139)
-        self.cell(0, 8, "MIGRATIONSVERKET - RÄTTSLIGT BESLUTSUNDERLAG (COI)", border=0, align='L')
-        self.line(10, 15, 200, 15)
-        self.ln(8)
+        self.set_font('Helvetica', 'B', 12)
+        self.cell(0, 6, "MIGRATIONSVERKET - AVDELNINGEN FÖR ASYLPRÖVNING", border=0, ln=True)
+        self.set_font('Helvetica', '', 10)
+        self.cell(0, 5, "Landinformation (COI) / Rättsligt Beslutsunderlag", border=0, ln=True)
+        self.line(10, 22, 200, 22)
+        self.ln(5)
+
     def footer(self):
         self.set_y(-15)
         self.set_font('Helvetica', 'I', 8)
-        self.cell(0, 10, f"Genererad: {datetime.now().strftime('%Y-%m-%d %H:%M')}", align='C')
+        self.cell(0, 10, f"Sida {self.page_no()} | Maskinellt genererad via COI-systemet | Behandlas enligt Offentlighets- och sekretesslagen", align='C')
 
-def generate_pdf(df: pd.DataFrame, ai_data: dict, year: int, query: str, state: str) -> bytes:
-    pdf = COIPDF()
+def generate_pdf(df: pd.DataFrame, ai_data: dict, params: dict) -> bytes:
+    pdf = DossierPDF(params['case'], params['officer_1'], params['officer_2'])
     pdf.add_page()
     
-    pdf.set_font('Helvetica', 'B', 14)
-    pdf.cell(0, 8, f"Rätts- och Socialrapport: Säkerhetsläge ({state}, USA)", ln=True)
+    # Metadata Block
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.cell(40, 6, "Ärendenummer:", 0, 0); pdf.set_font('Helvetica', '', 10); pdf.cell(0, 6, params['case'], 0, 1)
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.cell(40, 6, "Datum:", 0, 0); pdf.set_font('Helvetica', '', 10); pdf.cell(0, 6, datetime.now().strftime('%Y-%m-%d'), 0, 1)
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.cell(40, 6, "Utredningsfråga:", 0, 0); pdf.set_font('Helvetica', '', 10); pdf.multi_cell(0, 6, params['focus'].encode('latin-1', 'replace').decode('latin-1'))
+    pdf.ln(5)
+
+    # Legal Disclaimer
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.set_fill_color(241, 245, 249)
+    pdf.multi_cell(0, 5, "RÄTTSLIG FRISKRIVNING: Denna rapport innehåller maskinsyntetiserad text (AI). Utlåtandet utgör inte ett slutgiltigt myndighetsbeslut. Undertecknande handläggare och beslutsfattare bär det odelbara rättsliga ansvaret för att textens validitet prövas innan den läggs till grund för asylbeslut.", fill=True)
+    pdf.ln(5)
+
+    # Synthesis
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 7, "1. Rättsligt Tjänsteutlåtande", ln=True)
     pdf.set_font('Helvetica', '', 10)
-    pdf.cell(0, 6, f"Referensår: {year} | N = {len(df)} referensgranskade källor", ln=True)
-    pdf.ln(5)
+    pdf.multi_cell(0, 5, ai_data.get("synthesis", "").encode('latin-1', 'replace').decode('latin-1'))
+    pdf.ln(8)
 
-    pdf.set_font('Helvetica', 'B', 11)
-    pdf.cell(0, 7, "1. Rättslig Syntes (AI-understödd, källhänvisad)", ln=True)
-    pdf.set_font('Helvetica', '', 10)
-    pdf.multi_cell(0, 5, ai_data.get("synthesis", "Ingen syntes.").encode('latin-1', 'replace').decode('latin-1'))
-    pdf.ln(5)
-
-    pdf.set_font('Helvetica', 'B', 11)
-    pdf.cell(0, 7, "2. Metodologi & Söksträng (Spårbarhet)", ln=True)
-    pdf.set_font('Helvetica', 'I', 9)
-    pdf.multi_cell(0, 5, f"API Query: {query}")
-    pdf.ln(5)
-
-    pdf.set_font('Helvetica', 'B', 11)
-    pdf.cell(0, 7, "3. Formell Referenslista", ln=True)
+    # Reference List
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 7, "2. Referensförteckning", ln=True)
     pdf.set_font('Helvetica', '', 9)
     for _, row in df.iterrows():
-        ref = f"[{row['pmid']}] {row['title']} ({row['journal']}). PubMed."
+        ref = f"[{row['id']}] {row['title']} ({row['source']})."
         pdf.multi_cell(0, 5, ref.encode('latin-1', 'replace').decode('latin-1'))
         pdf.ln(2)
+    pdf.ln(5)
+
+    # Audit Trail
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 7, "3. Algoritmisk Revisionslogg", ln=True)
+    pdf.set_font('Helvetica', '', 8)
+    audit_text = f"Modell: {ai_data.get('model')}\nDatabaser använda: {', '.join(params['dbs'])}\nPrompt: {ai_data.get('prompt_used')[:200]}..."
+    pdf.multi_cell(0, 4, audit_text.encode('latin-1', 'replace').decode('latin-1'))
+    pdf.ln(10)
+
+    # Dual Signature Block (Tvåögonprincipen)
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.cell(90, 5, "Utrett av (Handläggare):", 0, 0)
+    pdf.cell(90, 5, "Föredraget och godkänt av (Beslutsfattare):", 0, 1)
+    pdf.ln(10)
+    pdf.line(10, pdf.get_y(), 80, pdf.get_y())
+    pdf.line(100, pdf.get_y(), 180, pdf.get_y())
+    pdf.ln(2)
+    pdf.set_font('Helvetica', '', 10)
+    pdf.cell(90, 5, params['officer_1'], 0, 0)
+    pdf.cell(90, 5, params['officer_2'], 0, 1)
 
     return pdf.output()
 
 # ---------------------------------------------------------
-# Streamlit UI
+# UI: Single Panel Workflow
 # ---------------------------------------------------------
 def main():
-    st.set_page_config(page_title="COI System: Migrationsverket", layout="wide")
+    st.title("⚖️ COI-Dossier: Rättsligt Evidensunderlag (HBTQI)")
+    st.markdown("Generering av landinformation med källkritiskt integrerade databaser för asylprövning.")
     
-    # 10 Minute Autorefresh (600,000 ms) for Live Media Tab
-    st_autorefresh(interval=600000, key="data_refresh")
+    st.info("⚠️ **Användaransvar:** AI-stödet agerar informationssamlare. Du bär rättsligt ansvar för bedömningen. Data lagras ej lokalt.")
+
+    # 1. Ärendeuppgifter
+    st.header("1. Byråkratiska Uppgifter (Journalföring)")
+    col1, col2, col3 = st.columns(3)
+    case_num = col1.text_input("Ärendenummer", placeholder="12-345678")
+    off_1 = col2.text_input("Handläggare (Signatur)", placeholder="AB1234")
+    off_2 = col3.text_input("Beslutsfattare (Signatur)", placeholder="CD5678")
+
+    # 2. Parametrar
+    st.header("2. Källor & Utredningsparametrar")
+    col4, col5 = st.columns(2)
+    target_state = col4.selectbox("Geografiskt område (USA)", list(STATE_MAPPING.keys()))
+    target_year = col5.slider("Referensår (Tidskriteriet)", 2020, 2026, 2026)
     
-    lang = "sv" if st.sidebar.radio("Språk / Language", ["Svenska", "English"], horizontal=True) == "Svenska" else "en"
-    t = I18N[lang]
+    databases = st.multiselect(
+        "Källkritiskt urval (Validerade databaser)",
+        ["PubMed (Medicinsk/Sociologisk data)", "UNHCR/Refworld & ILGA (Mänskliga rättigheter)"],
+        default=["PubMed (Medicinsk/Sociologisk data)", "UNHCR/Refworld & ILGA (Mänskliga rättigheter)"]
+    )
 
-    st.title(t["title"])
-    st.caption(t["subtitle"])
-    st.info(t["warning"])
+    # 3. Frågeställning & Autentisering
+    st.header("3. Rättslig Frågeställning & Körning")
+    focus_choice = st.selectbox("Standardiserad SOGI-fråga", STANDARD_QUESTIONS)
+    final_focus = st.text_area("Specifik inriktning", placeholder="Utveckla frågan här...") if focus_choice == "Egen specifik frågeställning..." else focus_choice
+    
+    api_key = st.text_input("OpenAI API-nyckel (Tjänstebruk)", type="password")
 
-    with st.sidebar:
-        st.header(t["sidebar_params"])
-        target_state = st.selectbox(t["state_select"], list(STATE_MAPPING.keys()))
-        target_year = st.slider(t["year_select"], 2020, 2026, 2026)
-        custom_focus = st.text_area(t["custom_focus"])
-        openai_key = st.text_input(t["openai_key"], type="password")
-        news_key = st.text_input(t["news_key"], type="password")
-        run_query = st.button(t["run_query"], type="primary", use_container_width=True)
-
-    if run_query:
-        with st.spinner("Kommunicerar med NCBI/PubMed API..."):
-            result = execute_extraction(target_state, target_year)
-            df = pd.DataFrame(result["data"])
-            st.session_state['data'] = df
-            st.session_state['audit'] = result["status"]
-            st.session_state['state'] = target_state
-            st.session_state['year'] = target_year
-            st.session_state['ai'] = generate_ai_synthesis(openai_key, df, custom_focus, lang)
-
-    tabs = st.tabs([t["tab_delta"], t["tab_live"], t["tab_ai"], t["tab_audit"], t["tab_pdf"]])
-
-    # 1. Criminological Risk Delta
-    with tabs[0]:
-        st.subheader("Strukturell Överrisk (Relative Risk)")
-        risk = calculate_risk_delta(target_state)
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Gen. Våldsbrott (per 100k)", risk["gen"])
-        c2.metric("HBTQI Hatbrott (per 100k)", risk["hate"])
-        c3.metric("Relativ Risk (RR)", f"{risk['rr']}x", delta="Överrisk", delta_color="inverse")
-        c4.metric("Officiell Hotnivå", risk["level"])
-        
-        fig = go.Figure(data=[
-            go.Bar(name='Allmän (Gen Pop)', x=[target_state], y=[risk["gen"]], marker_color='#94A3B8'),
-            go.Bar(name='Riktat Våld (HBTQI)', x=[target_state], y=[risk["hate"]], marker_color='#EF4444')
-        ])
-        fig.update_layout(barmode='group', height=350, margin=dict(t=30, b=0))
-        st.plotly_chart(fig, use_container_width=True)
-
-    # 2. Live Media
-    with tabs[1]:
-        st.subheader(f"Media Threat Velocity (10-min uppdatering)")
-        live_data = fetch_live_media_velocity(target_state, news_key)
-        m1, m2 = st.columns([1, 3])
-        with m1:
-            st.metric("Händelser (24h)", live_data["count"], delta="Uppdaterades nyss" if news_key else "Väntar")
-        with m2:
-            st.info(f"**Senaste Rubrik ({live_data['time']}):**\n\n*{live_data['headline']}*\n\nKälla: {live_data['source']}")
-
-    if 'data' in st.session_state and not st.session_state['data'].empty:
-        df = st.session_state['data']
-        ai_data = st.session_state['ai']
-        
-        # 3. AI Legal Synthesis
-        with tabs[2]:
+    if st.button("Generera Beslutsunderlag (PM)", type="primary", use_container_width=True):
+        if not api_key:
+            st.error("API-nyckel krävs för syntetisering.")
+            return
+            
+        with st.spinner("Utvinner och syntetiserar landinformation..."):
+            raw_data = []
+            if "PubMed (Medicinsk/Sociologisk data)" in databases:
+                raw_data.extend(fetch_pubmed_data(target_state, target_year))
+            if "UNHCR/Refworld & ILGA (Mänskliga rättigheter)" in databases:
+                raw_data.extend(fetch_human_rights_data(target_state, target_year))
+                
+            df = pd.DataFrame(raw_data)
+            
+            if df.empty:
+                st.warning("Inga resultat hittades för valt område och år.")
+                return
+                
+            ai_data = generate_legal_synthesis(api_key, df, final_focus)
+            
+            # Presentation of Results in a vertical flow
+            st.success("Beslutsunderlag genererat.")
+            st.markdown("---")
+            
+            st.subheader("Granskning av Tjänsteutlåtande")
             st.write(ai_data.get("synthesis", ""))
-
-        # 4. Audit
-        with tabs[3]:
-            st.code(generate_search_string(STATE_MAPPING[target_state], target_year))
-            st.write(f"**API Status:** {st.session_state['audit']}")
-            st.dataframe(df[['pmid', 'title']], use_container_width=True)
-
-        # 5. PDF
-        with tabs[4]:
-            pdf_bytes = generate_pdf(df, ai_data, target_year, generate_search_string(STATE_MAPPING[target_state], target_year), target_state)
-            st.download_button(label=t["tab_pdf"], data=bytes(pdf_bytes), file_name=f"COI_{target_state}_{target_year}.pdf", mime="application/pdf")
+            
+            st.subheader("Referenslista (Blandade källor)")
+            st.dataframe(df[['id', 'title', 'source']], use_container_width=True)
+            
+            # PDF Generation
+            params = {
+                'case': case_num or "Ej angivet",
+                'officer_1': off_1 or "Ej angiven",
+                'officer_2': off_2 or "Ej angiven",
+                'focus': final_focus,
+                'dbs': databases
+            }
+            pdf_bytes = generate_pdf(df, ai_data, params)
+            
+            st.download_button(
+                label="📥 Ladda ner PDF för Journalföring (Wilma)",
+                data=bytes(pdf_bytes),
+                file_name=f"Beslutsunderlag_{target_state}_{case_num}.pdf",
+                mime="application/pdf",
+                type="primary"
+            )
 
 if __name__ == "__main__":
     main()

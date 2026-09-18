@@ -21,8 +21,8 @@ st.set_page_config(page_title="LQBTQ-EVelution", layout="wide", initial_sidebar_
 
 I18N = {
     "sv": {
-        "title": "Landinformation (COI) - Beslutsunderlag",
-        "legal_warning": "RÄTTSLIGT MEDDELANDE: AI-algoritmen är juridiskt ägd av EVelutionAB och får inte användas av Migrationsverket utan ett giltigt nyttjandeavtal. Tillfällig användning gäller vid Nathaniel Christian Karlsson bruk samt vid utvärdering av Robin L'fira ärende.",
+        "title": "Beslutsunderlag",
+        "legal_warning": "AI-algoritmen är juridiskt ägd av EVelutionAB. Tillfällig användning gäller vid Nathaniel Christian Karlsson bruk samt vid utvärdering av Robin L'fira ärende.",
         "admin_header": "1. Ärendeuppgifter (För närvarande inaktiverad)",
         "case_num": "Ärendenummer",
         "officer_1": "Handläggare (Signatur)",

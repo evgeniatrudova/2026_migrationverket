@@ -28,8 +28,8 @@ st.set_page_config(page_title="Lifos COI: QoL & Kumulativ Bedömning", layout="w
 
 I18N = {
     "sv": {
-        "title": "Landinformation (COI) - Kumulativ Bedömning & Livskvalitet",
-        "legal_warning": "RÄTTSLIGT MEDDELANDE: AI-verktyget är licensierat av EVelutionAB. Tillfällig användning gäller vid utvärdering.",
+        "title": "Kumulativ Bedömning & Livskvalitet s LQBTQ i USA",
+        "legal_warning": "RÄTTSLIGT MEDDELANDE: AI-verktyget ägd av EVelution AB. Tillfällig användning gäller vid Robin L`Fira ärande, 2026.",
         "admin_header": "1. Ärendeuppgifter",
         "case_num": "Ärendenummer",
         "officer_1": "Handläggare",

@@ -431,12 +431,21 @@ def main():
             """
             <div style='border-left: 4px solid #b91c1c; padding: 8px 12px; background-color: #f9fafb; border-radius: 0 4px 4px 0;'>
                 <p style='font-style: italic; color: #1f2937; margin: 0; font-size: 0.95em;'>
-                    “I will end the government policy of trying to socially engineer race and gender into every aspect of public and private life. We will forge a society that is colorblind and merit based. As of today, it will henceforth be the official policy of the United States government that there are only two genders — male and female.”
+                    
+                    “I will end the government policy of trying to socially engineer race and gender into every aspect of public and private life. We will forge a society that is colorblind and merit based. As of today, it will henceforth be the official policy of the United States government that there are only two genders — male and female.” 
                 </p>
                 <hr style='margin: 6px 0; border: none; border-top: 1px solid #e5e7eb;'>
                 <p style='font-size: 0.8em; color: #6b7280; margin: 0;'>
-                    <strong>Donald Trump</strong> Official White House Executive Briefing & Statement. 20 january 2025 <br>
+                    <strong>Donald Trump</strong> Official White House Executive Briefing & Statement. <br>
                     <strong>Timestamp:</strong> January 20, 2025, 12:00 PM EST
+                </p>
+                <p style='font-style: italic; color: #1f2937; margin: 0; font-size: 0.95em;'>
+                       "I will sign a new executive order instructing every federal agency to cease all programs that promote the concept of sex and gender transition at any age... I will ask Congress to pass a bill establishing that the only genders recognized by the United States government are male and female, as determined at birth."     
+                </p>
+                <hr style='margin: 6px 0; border: none; border-top: 1px solid #e5e7eb;'>
+                <p style='font-size: 0.8em; color: #6b7280; margin: 0;'>
+                    <strong>Donald Trump</strong> Agenda 47. <br>
+                    <strong>Timestamp:</strong> Campaign 2023-2024. PM EST
                 </p>
             </div>
             """,

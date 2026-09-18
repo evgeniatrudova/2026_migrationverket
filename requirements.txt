@@ -5,3 +5,4 @@ plotly
 openai
 fpdf2
 streamlit-autorefresh
+beautifulsoup4

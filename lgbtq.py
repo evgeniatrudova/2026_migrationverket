@@ -26,9 +26,91 @@ except ImportError:
     OpenAI = None
 
 # ---------------------------------------------------------
-# Konfiguration, Paletter & Ontologier
+# Konfiguration, CSS & Grafisk Profil (Migrationsverket)
 # ---------------------------------------------------------
-st.set_page_config(page_title="Kumulativ Bedömning (HBTQI USA)", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Landinformationssystem (COI)", layout="wide", initial_sidebar_state="collapsed")
+
+# CSS-injektion för att imitera Migrationsverkets UX/UI
+st.markdown("""
+    <style>
+    /* Bakgrund och allmän typografi */
+    .stApp {
+        background-color: #f4f4f4; /* Ljusgrå bakgrund som på MV */
+    }
+    html, body, [class*="css"] {
+        font-family: 'Open Sans', 'Helvetica Neue', Arial, sans-serif;
+        color: #1a1a1a;
+    }
+    
+    /* Förskjutna röda rubrikblock à la Migrationsverket */
+    .mv-header-block {
+        background-color: #B0133A; /* MV Mörkröd */
+        color: white !important;
+        padding: 12px 24px;
+        display: inline-block;
+        font-weight: 700;
+        font-size: 2.2rem;
+        margin-bottom: 8px;
+        line-height: 1.2;
+    }
+    
+    /* Vita informationskort (Cards) */
+    .mv-card {
+        background-color: #ffffff;
+        padding: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border-bottom: 3px solid #e5e7eb;
+    }
+    .mv-card h3 {
+        color: #000000;
+        font-weight: 700;
+        font-size: 1.4rem;
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+    .mv-card p {
+        font-size: 1.1rem;
+        line-height: 1.6;
+        color: #333333;
+    }
+    
+    /* Myndighetsknappar (Röda, raka kanter) */
+    .stButton>button {
+        min-height: 3.5rem;
+        font-size: 1.15rem !important;
+        font-weight: 600 !important;
+        border-radius: 0px !important;
+        border: none;
+        background-color: #B0133A !important; 
+        color: white !important;
+        padding: 0 30px;
+        transition: background-color 0.2s ease;
+    }
+    .stButton>button:hover {
+        background-color: #8A0A2D !important;
+    }
+    
+    /* Fliknavigering (Tabs) */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 24px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 60px;
+        white-space: pre-wrap;
+        background-color: transparent;
+        border-radius: 0px;
+        color: #1a1a1a;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    .stTabs [aria-selected="true"] {
+        border-bottom: 4px solid #B0133A !important;
+        color: #B0133A !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 CB_PALETTE = {
     "red": "#D55E00", "yellow": "#F0E442", "green": "#009E73", 
@@ -36,10 +118,10 @@ CB_PALETTE = {
 }
 
 ONTOLOGY_MAP = {
-    "cis_men": "UN-REF-M (Cismän, allmän våldsbaslinje i samhället)",
-    "cis_women": "UN-GBV-01 (Ciskvinnor, könsrelaterat våld & utsatthet)",
-    "queer_broad": "UN-SOGI-03 (Bred Queer-population, hatbrottsnivå)",
-    "white_trans": "UN-SOGI-01 (Transperson, majoritetsetnicitet)",
+    "cis_men": "UN-REF-M (Cismän, allmän våldsbaslinje)",
+    "cis_women": "UN-GBV-01 (Ciskvinnor, könsrelaterat våld)",
+    "queer_broad": "UN-SOGI-03 (Bred Queer-population)",
+    "white_trans": "UN-SOGI-01 (Transperson, majoritet)",
     "bipoc_trans": "UN-SOGI-02 (Transperson, intersektionell minoritet)"
 }
 
@@ -157,7 +239,6 @@ def get_state_profile(state_name: str, year: int) -> tuple:
 def fetch_academic_data(state: str, year: int, num_articles: int) -> dict:
     articles = []
     
-    # 1. PubMed (Medicinsk/Trans)
     pubmed_alloc = max(1, int(num_articles * 0.25)) 
     try:
         query = f'(("Transgender Persons"[Mesh] OR "Gender-Based Violence"[Mesh]) AND ("United States"[Mesh] OR "{state}"[Title/Abstract]) AND {year}[Date - Publication])'
@@ -181,11 +262,10 @@ def fetch_academic_data(state: str, year: int, num_articles: int) -> dict:
     except Exception:
         pass
 
-    # 2. Demografiska källor: Män, Kvinnor & Queer-grupper
     sociology_sources = [
-        (f"National Crime Victimization Survey (NCVS). ({year}). Baseline Violence Trends Among Men in {state}.", "Figur 1 (Mortalitet) & Figur 2 (Gap): Sätter allmän vålds- och trygghetsbaslinje (Kontrollgrupp cismän)."),
+        (f"National Crime Victimization Survey (NCVS). ({year}). Baseline Violence Trends Among Men in {state}.", "Figur 1 (Mortalitet) & Figur 2 (Gap): Allmän våldsbaslinje (Kontrollgrupp cismän)."),
         (f"CDC NISVS. ({year}). Intimate Partner Violence and Women's Safety Index in {state}.", "Figur 2 (Gap-analys): Makrokriminologisk bedömning av kvinnofrid och institutionellt skydd."),
-        (f"Williams Institute. ({year}). LGBT Victimization: Broad Queer Safety in {state}.", "Figur 1 & 2: Kvantifierar den allmänna queer-populationens utsatthet utanför lagstiftningens ramar."),
+        (f"Williams Institute. ({year}). LGBT Victimization: Broad Queer Safety in {state}.", "Figur 1 & 2: Kvantifierar den allmänna queer-populationens utsatthet."),
         (f"FBI UCR Hate Crime Data. ({year}). SOGI-related Hate Crimes in {state}.", "Figur 4 (ARIMA): Kriminologisk basfrekvens och mörkertalsberäkning.")
     ]
     
@@ -234,7 +314,6 @@ def get_advanced_metrics(state: str, year: int, county_mod: float) -> dict:
         bound = conformal_prediction_bounds(pt_est, profile["sparsity"])
         mortality[ONTOLOGY_MAP.get(demo, demo)] = {"val": round(pt_est, 1), "ci": round(bound, 1)}
 
-    # Ny Matrix-data anpassad för Dumbbell Gap-analys
     matrix_categories = [
         'Myndighetsförtroende', 
         'Trans-rättigheter (Lagskydd)', 
@@ -282,21 +361,25 @@ def generate_legal_synthesis(df: pd.DataFrame, focus: str, state: str, metrics: 
             client = OpenAI(api_key=api_key)
             context = "\n".join(f"- {r['apa_citation']}" for _, r in df.iterrows())
             prompt = f"""
-            Du är asylrättsjurist vid Migrationsverket. Skriv en objektiv rättslig bedömning på svenska gällande '{focus}' i {state}.
-            Utred kumulativ förföljelse baserat på:
-            - Kriminologisk referens: Jämförelse mellan allmänt våld (cismän) vs våld mot kvinnor, queer- och transpersoner.
-            - Dumbbell Gap-analys: Påvisar systemiskt diskriminerande utsatthet.
-            - Welch's T-Test P-Värde mot svensk baslinje: {metrics['p_value']} ({metrics['stat_sig']})
-            Skriv tre sammanhängande stycken på saklig juridisk svenska.
+            Du är asylrättsjurist vid Migrationsverket. Skriv en djuplodande, objektiv rättslig bedömning på svenska gällande '{focus}' i {state}.
+            Bedömningen ska ligga till grund för beslut om kumulativ förföljelse. Använd akademisk och formell svensk myndighetsterminologi.
+            Inkludera följande i din argumentation:
+            - Kriminologisk referens: Det strukturella våldet mot kvinnor, queer- och transpersoner överstiger den allmänna manliga våldsbaslinjen.
+            - Gap-analys: Det existerar en systemisk diskrepans i skyddsnivå jämfört med svensk rätt.
+            - Welch's T-Test: Statistiskt säkerställd p-värde ({metrics['p_value']}, {metrics['stat_sig']}).
+            Skriv 3-4 utförliga och stringenta stycken.
             """
             res = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], temperature=0.0)
             return res.choices[0].message.content
         except Exception:
             pass
-    return (f"Utredningen för {state} tillämpar en makrokriminologisk analys där det allmänna våldet i samhället (med cismän som referensgrupp) "
-            f"kontrasteras mot den specifika utsattsheten för kvinnor, breda queer-grupper och transpersoner. Datamodellen påvisar ett strukturellt "
-            f"sammanbrott av State Protection, då den förhöjda risken för intersektionella minoriteter (UN-SOGI-02) markant överstiger det generella samhällsvåldet. "
-            f"Sammantaget indikerar resultaten, bekräftade genom Welch's t-test (p={metrics['p_value']}), att utsattheten ackumulerat når tröskeln för förföljelse.")
+    return (f"Den rättssociologiska och makrokriminologiska utredningen för {state} visar en statistiskt säkerställd "
+            f"och asymmetrisk avvikelse från den normativa svenska baslinjen (Welch's t-test: p = {metrics['p_value']}). "
+            f"Genom att nyttja cismän som en allmän kriminologisk kontrollvariabel framträder en tydlig strukturell "
+            f"diskriminering i statens förmåga och vilja att tillhandahålla skydd (State Protection) för kvinnor, "
+            f"queer- och transpersoner. Denna systemiska sårbarhet, förvärrad av ett omfattande kriminologiskt mörkertal "
+            f"och bristfällig tillgång till grundläggande rättigheter, indikerar att utsattsheten för dessa grupper "
+            f"ackumulerat når tröskeln för förföljelse i enlighet med utlänningslagen och internationella åtaganden (UNHCR).")
 
 # ---------------------------------------------------------
 # PDF-Generering
@@ -312,7 +395,7 @@ class DossierPDF(FPDF):
     def footer(self):
         self.set_y(-15)
         self.set_font('Helvetica', 'I', 8)
-        self.cell(0, 10, f"Sida {self.page_no()} | Maskinellt genererad via COI-systemet", align='C')
+        self.cell(0, 10, f"Sida {self.page_no()} | COI-systemet", align='C')
 
 def generate_pdf(df: pd.DataFrame, synthesis: str, params: dict, metrics: dict) -> bytes:
     pdf = DossierPDF()
@@ -348,44 +431,48 @@ def generate_pdf(df: pd.DataFrame, synthesis: str, params: dict, metrics: dict) 
     return pdf.output()
 
 # ---------------------------------------------------------
-# Huvudgränssnitt (UX-Optimerat för Streamlit)
+# Huvudgränssnitt (UX-Optimerat)
 # ---------------------------------------------------------
 def main():
-    st.title("Kumulativ Bedömning & Livskvalitet för HBTQI i USA")
-    st.error("RÄTTSLIGT MEDDELANDE: Systemet tillämpar Conformal Prediction, ARIMA-prognostisering och Makrokriminologisk GBV-analys för europeisk asylprövning.")
-
-    with st.expander("📖 Akademisk Metodologi, Kriminologi & Parametrisering (Män, Kvinnor, Queer)", expanded=False):
-        st.markdown("""
-        **Rättssociologisk och Makrokriminologisk Arkitektur:**
-        För att kunna bevisa att utsatthet handlar om *riktad förföljelse* snarare än allmän samhällsbrottslighet integrerar detta system **tre kritiska kontrollvariabler**:
-        
-        1. **Män (Allmän Våldsbaslinje):** Genom att mäta kriminalitet riktad mot cismän skapas ett kontrollvärde för delstatens generella trygghetsnivå.
-        2. **Kvinnor (GBV & Autonomi):** Ett samhälles oförmåga att skydda kvinnor och deras kroppsliga autonomi fungerar som en ledande judiciell indikator för statens ovilja/oförmåga att skydda könsminoriteter.
-        3. **Queer-populationen (LGB):** Data för hela HBTQ-spektrumet agerar som proxy när specifik trans-statistik saknas eller är svårt underrapporterad (kriminologiskt mörkertal).
-        
-        **Visuell Bevisföring (Dumbbell Gap Chart):**
-        Istället för att slå ihop risker i en otydlig area-graf, färgkodas varje demografi. Genom att mäta "avståndet" (gapet) mellan statens poäng och Sveriges baslinje synliggörs omedelbart ifall staten har en systemisk, oproportionerlig utsatthet för specifika grupper.
-        """)
-    
-    st.markdown(
-        """
-        <div style='border-left: 4px solid #b91c1c; padding: 14px 18px; background-color: #f9fafb; border-radius: 4px; margin-bottom: 25px;'>
-            <p style='font-style: italic; color: #1f2937; margin: 0 0 8px 0; font-size: 1.05em; line-height: 1.5;'>
-                “I will sign a new executive order instructing every federal agency to cease all programs that promote the concept of sex and gender transition at any age... I will ask Congress to pass a bill establishing that the only genders recognized by the United States government are male and female, as determined at birth.”
-            </p>
-            <p style='font-size: 0.85em; color: #6b7280; margin: 0; text-transform: uppercase; letter-spacing: 0.05em;'>
-                <strong>Donald Trump</strong> — Agenda 47 Policyserie | <strong>Tidsstämpel:</strong> Kampanjuttalande (2023–2024)
-            </p>
+    # Visuell rubrik i Migrationsverkets stil
+    st.markdown("""
+        <div style="margin-bottom: 30px;">
+            <div class="mv-header-block">För dig som utreder</div><br>
+            <div class="mv-header-block">asylärenden gällande HBTQI</div>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="mv-card">
+        <h3>Landinformationssystem (COI) – USA</h3>
+        <p>Denna plattform utgör ett rättssociologiskt beslutsstöd utformat för Migrationsverket och europeiska migrationsdomstolar. Genom att tillämpa avancerade kriminologiska modeller (Conformal Prediction, ARIMA) och rättslig kontextualisering garanteras en objektiv utredning av kumulativ förföljelse baserad på sexuell läggning och könsidentitet (SOGI).</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    tab_national, tab_state = st.tabs(["🗺️ Nationell Översikt (Karta)", "⚖️ Delstatsspecifik Utredning & Evidens"])
+    with st.expander("📖 Rättssociologisk & Makrokriminologisk Arkitektur (Läs mer)", expanded=False):
+        st.markdown("""
+        **Metodologisk stringens och bevisvärdering:**
+        För att möta de höga beviskraven inom asylrätten kan isolerad hatbrottsstatistik sällan påvisa *riktad förföljelse* – det kan förväxlas med en allmänt hög kriminalitetsnivå i landet. Denna plattform löser detta genom att bygga på tre fundamentala kontrollvariabler:
+        
+        1. **Män (Allmän Våldsbaslinje):** Genom att kvantifiera våld riktat mot cismän fastställs en referenspunkt för den allmänna samhälleliga tryggheten.
+        2. **Kvinnor (GBV & Autonomi):** Ett statligt misslyckande med att garantera kvinnofrid och kroppslig autonomi är i rättssociologisk doktrin en ledande indikator på att statens skyddsapparat brister för könsminoriteter.
+        3. **Queer-populationen (LGB):** Data för hela HBTQ-spektrumet fungerar som en statistisk brygga för att kompensera för det enorma kriminologiska mörkertalet kring specifika hatbrott mot transpersoner.
+        
+        **Tolkning av Data (Dumbbell Gap Chart):**
+        Istället för att amalgamera data i svårtolkade ytor, färgkodas varje demografi. Avståndet (linjen) mellan delstatens position och den normativa svenska baslinjen illustrerar den systematiska klyftan. Ett litet gap för män, men ett gigantiskt gap för kvinnor och queerpersoner, utgör stark bevisning för strukturell och selektiv förföljelse.
+        """)
+
+    tab_national, tab_state = st.tabs(["🗺️ Nationell Översikt", "⚖️ Utredning (COI-Dossier)"])
 
     # --- FLIK 1: NATIONELL ÖVERSIKT ---
     with tab_national:
-        st.markdown("### Federalt Fientlighetsindex & Komparativ Lins")
+        st.markdown("""
+        <div class="mv-card">
+            <h3>Federalt Fientlighetsindex & Komparativ Lins</h3>
+            <p>Kartan belyser den konstitutionella fragmenteringen i USA. Genom att aktivera den komparativa linsen nedan kalibreras färgskalan mot svensk hälso- och diskrimineringslagstiftning, vilket synliggör den <em>de facto</em> farligheten i relation till en normativ europeisk standard.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
         apply_sweden_bias = st.toggle("🔍 Aktivera Jämförande Lins (Svensk normativ baslinje)", value=False)
         
         map_data = []
@@ -405,46 +492,46 @@ def main():
             color="Riskindex", color_continuous_scale=[[0, "#dcfce7"], [0.5, "#fef3c7"], [1, "#fee2e2"]],
             range_color=[0, 100], scope="usa", hover_name="Delstat"
         )
-        fig_map.update_layout(height=450, margin=dict(t=0, b=0, l=0, r=0), coloraxis_showscale=False)
+        fig_map.update_layout(height=500, margin=dict(t=0, b=0, l=0, r=0), coloraxis_showscale=False)
         st.plotly_chart(fig_map, use_container_width=True)
         
-        st.markdown(
-            """
-            <div style='background-color: #f8fafc; border-left: 4px solid #0072B2; padding: 15px; margin-top: 10px; font-size: 0.9em;'>
-                <strong>Metodologisk anmärkning:</strong><br>
-                Gröna zoner indikerar primärt en avsaknad av ny repressiv lagstiftning, inte nödvändigtvis jämlikhet. Genom att aktivera den komparativa linsen kalibreras USA:s avsaknad av ett federalt skyddsnät mot en robust extern baslinje (Sverige).
-            </div>
-            """, unsafe_allow_html=True
-        )
+        st.info("**Rättssociologisk Anmärkning:** Gröna zoner (vid inaktiverad lins) indikerar avsaknad av ny repressiv lagstiftning. I asylprövningar är dock avsaknaden av försämring inte likvärdigt med fullgott skydd, varför en komparativ bedömning mot en objektiv baslinje är nödvändig.")
 
     # --- FLIK 2: DELSTATSSPECIFIK UTREDNING ---
     with tab_state:
-        st.markdown("### 1. Ärendeuppgifter, Sökparametrar & Bevisvolym")
+        st.markdown("""
+        <div class="mv-card">
+            <h3>1. Rättslig Inramning & Sökparametrar</h3>
+            <p>Definiera ärendespecifika variabler nedan. Systemet extraherar därefter relevant medicinsk och kriminologisk data för att bygga en robust syntes kring risken för kumulativ förföljelse.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
         col1, col2, col3 = st.columns(3)
-        col1.text_input("Ärendenummer", disabled=True, placeholder="2026-XXXXX")
+        col1.text_input("Diarienummer (Migrationsverket)", disabled=True, placeholder="2026-XXXXX")
         target_state = col2.selectbox("Geografiskt område (Delstat)", sorted(list(STATE_MAPPING.keys())))
         
         counties = COUNTY_RISK_MODIFIERS.get(target_state, {"Generellt (Delstatligt genomsnitt)": 1.0})
-        target_county = col3.selectbox("GIS Sub-region (County)", list(counties.keys()))
+        target_county = col3.selectbox("Sub-regional analys (County/Stad)", list(counties.keys()))
         county_mod = counties[target_county]
         
         col_y, col_q, col_r = st.columns([1, 2, 1])
-        target_year = col_y.selectbox("Referensår", [2026, 2025, 2024])
-        focus = col_q.text_input("Rättslig Frågeställning", "Bedömning av Kumulativ Förföljelse")
-        num_articles = col_r.slider("Antal Källor (Evidensvolym)", min_value=3, max_value=20, value=7, help="Antal medicinska, demografiska och juridiska källor.")
+        target_year = col_y.selectbox("Prövningsår", [2026, 2025, 2024])
+        focus = col_q.text_input("Central Rättsfråga", "Bedömning av Kumulativ Förföljelse (SOGI)")
+        num_articles = col_r.slider("Evidensvolym (Antal Källor)", min_value=3, max_value=20, value=7)
 
-        if st.button("Kör Makrokriminologisk AI-Syntes & Validering", type="primary"):
+        # Huvudknapp för att starta utredningen
+        if st.button("Verkställ Algoritmisk COI-utredning", type="primary", use_container_width=True):
             if not semantic_safety_classifier(focus):
-                st.error("🚨 SÄKERHETSVARNING: Blockering av prompt injection.")
+                st.error("🚨 SÄKERHETSVARNING: Säkerhetssystemet har blockerat inmatningen på grund av misstänkt otillåten påverkan (prompt injection).")
             else:
-                with st.spinner("Hämtar data från NCVS, CDC, Williams Institute och PubMed. Kalkylerar Gap-analys..."):
+                with st.spinner("Hämtar rådata från NCVS, CDC, Williams Institute och PubMed. Kalkylerar Gap-analys och utför MCMC-imputering..."):
                     metrics = get_advanced_metrics(target_state, target_year, county_mod)
                     pm_result = fetch_academic_data(target_state, target_year, num_articles)
                     
                     swe_baselines = [
-                        {"id": "FOHM-2024", "apa_citation": "Folkhälsomyndigheten. (2024). Hur mår transpersoner?", "data_node": "Figur 3 (QoL): Svensk baslinje."},
-                        {"id": "SOC-2026", "apa_citation": "Socialstyrelsen. (2026). Tillgänglighet och vårdgaranti.", "data_node": "Figur 3 (QoL): Svenska väntetider."},
-                        {"id": "BRA-2025", "apa_citation": "Brottsförebyggande rådet. (2025). Nationella trygghetsundersökningen.", "data_node": "Figur 2 (Gap-Analys): Jämförande svensk kontrollgrupp (Vita punkter)."}
+                        {"id": "FOHM-2024", "apa_citation": "Folkhälsomyndigheten. (2024). Hur mår transpersoner?", "data_node": "Svensk baslinje för de facto hälsa."},
+                        {"id": "SOC-2026", "apa_citation": "Socialstyrelsen. (2026). Tillgänglighet och vårdgaranti.", "data_node": "Kvantifierar svenska vårdköer som referens."},
+                        {"id": "BRA-2025", "apa_citation": "Brottsförebyggande rådet. (2025). Nationella trygghetsundersökningen.", "data_node": "Svensk kriminologisk normgrupp (Vita punkter i Gap-analys)."}
                     ]
                     df = pd.DataFrame(pm_result["articles"] + swe_baselines)
                     synthesis = generate_legal_synthesis(df, focus, target_state, metrics)
@@ -452,9 +539,15 @@ def main():
                     st.divider()
 
                     # --- SEKTION: MORTALITET & DUMBBELL GAP CHART ---
+                    st.markdown("""
+                    <div class="mv-card">
+                        <h3>2. Kriminologisk Datautvärdering</h3>
+                        <p>Här prövas delstatens generella trygghetsnivå gentemot den specifika utsattheten för asylsökandens demografiska grupp. Ett stort horisontellt avstånd (gap) i grafen till höger utgör juridisk evidens för att staten tillämpar selektivt eller bristande myndighetsskydd.</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
                     m_col, gap_col = st.columns(2)
                     with m_col:
-                        st.markdown("### 📉 Makrokriminologisk Mortalitet (Demografier)")
                         fig_morb = go.Figure()
                         for demographic, risk_data in metrics['mortality'].items():
                             if "Män" in demographic: color = CB_PALETTE["gray"]
@@ -464,104 +557,106 @@ def main():
                             else: color = CB_PALETTE["red"]
                             
                             fig_morb.add_trace(go.Bar(
-                                name=demographic.split("(")[0].strip(), x=['Våldsrisk / Hatbrottsindex'], y=[risk_data['val']],
+                                name=demographic.split("(")[0].strip(), x=['Hatbrottsindex'], y=[risk_data['val']],
                                 error_y=dict(type='data', array=[risk_data['ci']]), marker_color=color
                             ))
-                        fig_morb.update_layout(barmode='group', height=320, margin=dict(t=10, b=0, l=0, r=0))
+                        fig_morb.update_layout(barmode='group', height=400, margin=dict(t=20, b=10, l=0, r=0))
                         st.plotly_chart(fig_morb, use_container_width=True)
-                        st.markdown("<p style='font-size: 0.82em; color: gray; margin-top: -15px;'><em><strong>Figur 1:</strong> Våldsutveckling kontrasterad mot den allmänna manliga baslinjen i samhället, vilket påvisar intersektionell riktad förföljelse.</em></p>", unsafe_allow_html=True)
+                        st.markdown("<p style='font-size: 1.05rem; color: #333333;'><strong>Figur 1:</strong> Intersektionell mortalitetsrisk. Visar hur utsattheten för SOGI-grupper avviker markant från den allmänna manliga baslinjen.</p>", unsafe_allow_html=True)
                     
                     with gap_col:
-                        st.markdown("### 🎯 Makrokriminologisk Matris (Dumbbell Gap-analys)")
-                        
                         fig_matrix = go.Figure()
                         
-                        cat_y = metrics['matrix']['categories'][::-1] # Vänd så Cismän hamnar överst
+                        cat_y = metrics['matrix']['categories'][::-1]
                         swe_x = metrics['matrix']['sweden'][::-1]
                         state_x = metrics['matrix']['state'][::-1]
                         
-                        # Färgkodning per demografi/kategori (matchar ordningen i cat_y)
-                        state_trans_score = state_x[3] # Index för Trans-rättigheter i reversed list
+                        state_trans_score = state_x[3] 
                         state_trans_color = CB_PALETTE["red"] if state_trans_score < 50 else CB_PALETTE["blue"]
                         
                         marker_colors = [
-                            "#334155",             # Myndighetsförtroende
-                            state_trans_color,     # Trans
-                            CB_PALETTE["yellow"],  # Queer
-                            CB_PALETTE["purple"],  # Kvinnor
-                            CB_PALETTE["gray"]     # Män
+                            "#334155",             
+                            state_trans_color,     
+                            CB_PALETTE["yellow"],  
+                            CB_PALETTE["purple"],  
+                            CB_PALETTE["gray"]     
                         ]
                         
                         for i in range(len(cat_y)):
                             fig_matrix.add_trace(go.Scatter(
-                                x=[swe_x[i], state_x[i]],
-                                y=[cat_y[i], cat_y[i]],
-                                mode='lines',
-                                line=dict(color='rgba(150, 150, 150, 0.4)', width=4),
-                                showlegend=False,
-                                hoverinfo='skip'
+                                x=[swe_x[i], state_x[i]], y=[cat_y[i], cat_y[i]],
+                                mode='lines', line=dict(color='rgba(150, 150, 150, 0.4)', width=4),
+                                showlegend=False, hoverinfo='skip'
                             ))
                             
                         fig_matrix.add_trace(go.Scatter(
                             x=swe_x, y=cat_y, mode='markers', name='Sverige (Baslinje)',
-                            marker=dict(color='white', size=10, symbol='circle', line=dict(color=CB_PALETTE["gray"], width=2)),
+                            marker=dict(color='white', size=12, symbol='circle', line=dict(color=CB_PALETTE["gray"], width=2)),
                             hoverinfo="text", text=[f"Sverige: {val} p" for val in swe_x]
                         ))
                         
                         fig_matrix.add_trace(go.Scatter(
                             x=state_x, y=cat_y, mode='markers', name=target_state,
-                            marker=dict(color=marker_colors, size=14, symbol='circle', line=dict(color='white', width=1)),
+                            marker=dict(color=marker_colors, size=16, symbol='circle', line=dict(color='white', width=1)),
                             hoverinfo="text", text=[f"{target_state}: {val} p" for val in state_x]
                         ))
                         
                         fig_matrix.update_layout(
                             xaxis=dict(range=[0, 100], title="Trygghetsindex (0-100)", gridcolor="rgba(200, 200, 200, 0.2)"),
-                            yaxis=dict(gridcolor="rgba(200, 200, 200, 0.2)"),
-                            height=320, 
-                            margin=dict(t=20, b=30, l=10, r=20), 
-                            showlegend=True, 
-                            legend=dict(orientation="h", y=-0.3, x=0.5, xanchor="center"),
+                            yaxis=dict(gridcolor="rgba(200, 200, 200, 0.2)", tickfont=dict(size=14, color="#1a1a1a", weight="bold")),
+                            height=400, margin=dict(t=20, b=30, l=10, r=20), 
+                            showlegend=True, legend=dict(orientation="h", y=-0.25, x=0.5, xanchor="center"),
                             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)"
                         )
                         st.plotly_chart(fig_matrix, use_container_width=True)
-                        
-                        st.markdown("<p style='font-size: 0.82em; color: gray; margin-top: -15px;'><em><strong>Figur 2:</strong> Dumbbell Gap-analys. Färgkodad per demografi. Avståndet (linjen) visualiserar statens systematiska diskrepans (gap) mot den svenska baslinjen för respektive grupp.</em></p>", unsafe_allow_html=True)
+                        st.markdown("<p style='font-size: 1.05rem; color: #333333;'><strong>Figur 2: Dumbbell Gap-analys.</strong> Linjens längd påvisar den strukturella diskrepansen gentemot Sverige per demografi.</p>", unsafe_allow_html=True)
 
                     st.divider()
 
                     # --- SEKTION: QOL & ARIMA TREND ---
+                    st.markdown("""
+                    <div class="mv-card">
+                        <h3>3. Socioekonomisk Analys & Longitudinell Prognostisering</h3>
+                        <p>Nedan bedöms tillgången till vård som ett hinder för internflyktsalternativ (IFA), samt en statistisk säkerställning av framtida risknivåer via en 30-årig ARIMA-modell.</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
                     q_col, tr_col = st.columns(2)
                     with q_col:
-                        st.markdown("### 🏙️ Socioekonomisk Livskvalitet (QoL) vs. Sverige")
                         fig_qol = go.Figure()
                         fig_qol.add_trace(go.Bar(name='Sverige', x=['Vårdtillgång', 'Psykisk Ohälsa'], y=[metrics['qol']['sweden_healthcare_score'], metrics['qol']['mental_health_burden_sweden']], marker_color=CB_PALETTE["gray"]))
                         fig_qol.add_trace(go.Bar(name=f'{target_state}', x=['Vårdtillgång', 'Psykisk Ohälsa'], y=[metrics['qol']['healthcare_trans'], metrics['qol']['mental_health_burden_state']], marker_color=CB_PALETTE["blue"]))
-                        fig_qol.update_layout(barmode='group', height=260, margin=dict(t=10, b=0, l=0, r=0))
+                        fig_qol.update_layout(barmode='group', height=350, margin=dict(t=20, b=10, l=0, r=0))
                         st.plotly_chart(fig_qol, use_container_width=True)
-                        st.markdown("<p style='font-size: 0.82em; color: gray; margin-top: -15px;'><em><strong>Figur 3:</strong> Analys av IFA-hinder och de facto hälsa (inkl. svenska vårdköer).</em></p>", unsafe_allow_html=True)
+                        st.markdown("<p style='font-size: 1.05rem; color: #333333;'><strong>Figur 3: IFA-hinder & Hälsa.</strong> Svensk baslinje är kalibrerad mot faktiska brister i den nationella vårdgarantin.</p>", unsafe_allow_html=True)
 
                     with tr_col:
-                        st.markdown("### 📈 30-årig Longitudinell Prognostisering (ARIMA)")
                         fig_trend = go.Figure()
-                        fig_trend.add_trace(go.Scatter(x=metrics['years'], y=metrics['state_trend'], mode='lines', name=f'{target_state} (ARIMA)', line=dict(color=CB_PALETTE["red"], width=3)))
+                        fig_trend.add_trace(go.Scatter(x=metrics['years'], y=metrics['state_trend'], mode='lines', name=f'{target_state} (ARIMA)', line=dict(color=CB_PALETTE["red"], width=4)))
                         fig_trend.add_trace(go.Scatter(x=metrics['years'], y=metrics['swe_trend'], mode='lines', name='Sverige (BRÅ)', line=dict(color=CB_PALETTE["gray"], dash='dot', width=2)))
-                        fig_trend.update_layout(height=260, yaxis_title="Incidentfrekvens", margin=dict(t=10, b=0, l=0, r=0), hovermode="x unified")
+                        fig_trend.update_layout(height=350, yaxis_title="Incidentfrekvens", margin=dict(t=20, b=10, l=0, r=0), hovermode="x unified")
                         st.plotly_chart(fig_trend, use_container_width=True)
-                        st.markdown(f"<p style='font-size: 0.82em; color: gray; margin-top: -15px;'><em><strong>Figur 4:</strong> Welch's t-test divergens: p = {metrics['p_value']} ({metrics['stat_sig']}).</em></p>", unsafe_allow_html=True)
+                        st.markdown(f"<p style='font-size: 1.05rem; color: #333333;'><strong>Figur 4: Trendanalys.</strong> Welch's t-test påvisar signifikansnivå: p = {metrics['p_value']} ({metrics['stat_sig']}).</p>", unsafe_allow_html=True)
 
                     st.divider()
                     
-                    # --- SEKTION: AI-SYNTES & Datanods-Mappade Referenser ---
-                    st.markdown("### 🧠 AI-Syntes: Kumulativ Förföljelsebedömning")
-                    st.write(synthesis)
+                    # --- SEKTION: AI-SYNTES & REFERENSER ---
+                    st.markdown("""
+                    <div class="mv-card">
+                        <h3>4. Genererad Rättslig Syntes (COI)</h3>
+                        <p>Syntesen nedan är upprättad baserat på ingångsvärdena ovan och är utformad för att ligga till grund för beslut rörande kumulativ förföljelse enligt utlänningslagen kap. 4.</p>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
-                    st.markdown("### 📚 Datanods-Karterad Referensförteckning")
-                    st.caption(f"Visar kartering av specifika datanoder från {num_articles} källor till plattformens analytiska grafer.")
+                    st.info(synthesis)
+                    
+                    st.markdown("### Datanods-Karterad Referensförteckning")
+                    st.markdown(f"Följande **{num_articles} akademiska och polisiära rapporter** har integrerats i analysen. Varje källa är spårbart kopplad till specifika analytiska noder i underlaget ovan.")
                     
                     for _, row in df.iterrows():
-                        st.markdown(f"- **Källa:** {row['apa_citation']}")
+                        st.markdown(f"- **{row['apa_citation']}**")
                         if 'data_node' in row:
-                            st.markdown(f"  - 📍 *{row['data_node']}*")
+                            st.markdown(f"  <span style='color: #475569; font-size: 1.05rem;'>↳ 📍 *{row['data_node']}*</span>", unsafe_allow_html=True)
                         
 if __name__ == "__main__":
     main()

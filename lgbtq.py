@@ -207,7 +207,7 @@ def get_advanced_metrics(state: str, year: int, county_mod: float) -> dict:
     elif profile["tier"] == "Gul":
         triage = {"health": ("Gul", "Varning", f"Tillgång till vård är hotad. Status: {profile['care']}."),
                   "state_protection": ("Gul", "Varning", f"Betydande regional klyfta gällande skydd."),
-                  "ifa": ("Grön", "Säker", "Internflykt till s.k. Sanctuary Cities bedöms fortfarande rimlig.")}
+                  "ifa": ("Grön", "Säker", "Internflykt till urbana fristäder (Sanctuary Cities) bedöms rimlig.")}
         qol_health_score = 55
     else:
         triage = {"health": ("Grön", "Säker", "Rätt till könsbekräftande och allmän hälso- och sjukvård är skyddad."),
@@ -219,9 +219,9 @@ def get_advanced_metrics(state: str, year: int, county_mod: float) -> dict:
         "employment_trans": 75 if profile["tier"] == "Röd" else 85, 
         "employment_cis": 92,
         "healthcare_trans": qol_health_score, 
-        "sweden_healthcare_score": 65, # Baslinje svensk vårdgaranti
+        "sweden_healthcare_score": 65,
         "mental_health_burden_state": 85 if profile["tier"] == "Röd" else 70,
-        "mental_health_burden_sweden": 60, # Baslinje Folkhälsomyndigheten
+        "mental_health_burden_sweden": 60,
         "homelessness_rr": profile["homeless_rr"]
     }
 
@@ -332,7 +332,6 @@ def main():
     st.title("Kumulativ Bedömning & Livskvalitet för HBTQI i USA")
     st.error("RÄTTSLIGT MEDDELANDE: Systemet tillämpar Conformal Prediction, 30-årig ARIMA-prognostisering och PubMed RAG anpassat för den europeiska asylprocessen.")
 
-    # Akademisk och Metodologisk Preamble (Skriven för framtida asylrättsjurister/forskare)
     with st.expander("📖 Akademisk Metodologi & Parametrisering (Sverige vs. USA)", expanded=False):
         st.markdown("""
         **Systemarkitektur & Komparativ Analys:**
@@ -347,7 +346,6 @@ def main():
         4. **Longitudinell Prognos (ARIMA):** Modellerar en 30-årig trend av fientlighetseskalering. Data testas via Welch's t-test för ojämn varians för att fastställa ifall den amerikanska eskaleringen statistiskt divergerar (p < 0.05) från Brottsförebyggande rådets (BRÅ) statistik.
         """)
     
-    # Permanent Trump-citat placerat framträdande ovanför navigeringen
     st.markdown(
         """
         <div style='border-left: 4px solid #b91c1c; padding: 14px 18px; background-color: #f9fafb; border-radius: 4px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'>
@@ -362,29 +360,46 @@ def main():
         unsafe_allow_html=True
     )
 
-    # Navigering: Nationell Översikt vs. Delstatsspecifik Utredning
     tab_national, tab_state = st.tabs(["🗺️ Nationell Översikt (Karta)", "⚖️ Delstatsspecifik Utredning (Sökning)"])
 
     # --- FLIK 1: NATIONELL ÖVERSIKT ---
     with tab_national:
-        st.markdown("### Federalt Fientlighetsindex & Delstatsrisker")
-        st.write("Färgkodad karta baserad på lagstiftningsvolym och de facto-risker. Visar hur det konstitutionella skyddet fragmenteras på lokal nivå.")
+        st.markdown("### Federalt Fientlighetsindex & Komparativ Lins")
+        st.write("Visar hur det konstitutionella skyddet fragmenteras på delstatlig nivå. Genom att aktivera den komparativa linsen kan du omkalibrera kartan för att direkt jämföra riskerna med den svenska baslinjen.")
+        
+        apply_sweden_bias = st.toggle("🔍 Aktivera Jämförande Lins (Svensk normativ baslinje)", value=False, help="Omkalibrerar kartans data för att reflektera det systematiska avståndet till Sveriges hälso- och diskrimineringslagstiftning.")
         
         map_data = []
         for s_name in STATE_MAPPING.keys():
             prof, _ = get_state_profile(s_name, 2026)
             abbr = STATE_ABBR.get(s_name, s_name[:2].upper())
-            map_data.append({"Delstat": s_name, "Abbr": abbr, "Riskindex": prof.get("risk_score", 50)})
+            base_risk = prof.get("risk_score", 50)
+            
+            if apply_sweden_bias:
+                # Tillämpar straffskala (+35) för avsaknad av federalt skydd och högre basfrekvens av våld jämfört med svensk baslinje.
+                adjusted_risk = min(100, base_risk + 35)
+                map_data.append({"Delstat": s_name, "Abbr": abbr, "Riskindex": adjusted_risk})
+            else:
+                map_data.append({"Delstat": s_name, "Abbr": abbr, "Riskindex": base_risk})
         
         fig_map = px.choropleth(
             pd.DataFrame(map_data), locations="Abbr", locationmode="USA-states",
             color="Riskindex", color_continuous_scale=[[0, "#dcfce7"], [0.5, "#fef3c7"], [1, "#fee2e2"]],
-            scope="usa", hover_name="Delstat", labels={"Riskindex": "Legislativt Riskindex"}
+            range_color=[0, 100], scope="usa", hover_name="Delstat", labels={"Riskindex": "Legislativt Riskindex"}
         )
         fig_map.update_layout(height=450, margin=dict(t=0, b=0, l=0, r=0), coloraxis_showscale=False)
         st.plotly_chart(fig_map, use_container_width=True)
+        
+        st.markdown(
+            """
+            <div style='background-color: #f8fafc; border-left: 4px solid #0072B2; padding: 15px; margin-top: 10px; font-size: 0.9em; color: #334155;'>
+                <strong>Metodologisk anmärkning (Jämförande Rättssociologi):</strong><br>
+                Gröna zoner i den ojusterade spatiala riskgraderingen indikerar inte nödvändigtvis en absolut närvaro av jämlika rättigheter eller förbättrade livsvillkor. Istället reflekterar de primärt en avsaknad av <em>ny</em> repressiv lagstiftning i en isolerad amerikansk kontext. Ur ett folkrättsligt och akademiskt perspektiv är ett bevarande av <em>status quo</em> inte ekvivalent med rättslig progression eller materiell jämlikhet; frånvaron av förändring kan innebära ett upprätthållande av strukturell repression när detta mäts mot en normativ extern baslinje (t.ex. Sverige).
+            </div>
+            """, unsafe_allow_html=True
+        )
 
-    # --- FLIK 2: DELSTATSSPECIFIK UTREDNING (SÖKNING & GRAFER) ---
+    # --- FLIK 2: DELSTATSSPECIFIK UTREDNING ---
     with tab_state:
         st.markdown("### 1. Ärendeuppgifter & Sökparametrar")
         col1, col2, col3 = st.columns(3)

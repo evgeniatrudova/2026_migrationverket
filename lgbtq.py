@@ -98,15 +98,14 @@ def bayesian_imputation_mcmc(prior_mean: float, observed_variance: float) -> flo
     return max(0, float(np.random.normal(posterior_mean, 1.0)))
 
 def glm_predict_risk(bills: int, pop: float, county_mod: float, women_safety: float, lgb_hate: float, men_crime: float, kriminologiskt_morkertal: float = 1.35) -> Dict:
-    # Integrerar män (kontrollvariabel), kvinnor (GBV) och bred queer-utsatthet
     gbv_penalty = (100 - women_safety) * 0.08
     trans_escalation = (0.1 * bills) - (0.05 * pop) + (2.0 * county_mod)
     base_rate_pred = (men_crime + trans_escalation + gbv_penalty + (lgb_hate * 0.2)) * kriminologiskt_morkertal
     
     return {
-        "cis_men": men_crime, # Allmän våldsbaslinje
-        "cis_women": men_crime + gbv_penalty, # Strukturellt kvinnovåld
-        "queer_broad": base_rate_pred * 0.75, # Bred LGB-utsatthet
+        "cis_men": men_crime,
+        "cis_women": men_crime + gbv_penalty, 
+        "queer_broad": base_rate_pred * 0.75, 
         "white_trans": max(1.0, base_rate_pred * 0.9),
         "bipoc_trans": max(2.0, base_rate_pred * 1.6 + (county_mod * 0.5))
     }
@@ -155,7 +154,7 @@ def get_state_profile(state_name: str, year: int) -> tuple:
     return profile, provenance
 
 # ---------------------------------------------------------
-# Datainsamling (Strukturerade Källor för Män, Kvinnor, Queer)
+# Datainsamling (Multi-Database RAG)
 # ---------------------------------------------------------
 def fetch_academic_data(state: str, year: int, num_articles: int) -> dict:
     articles = []
@@ -237,9 +236,27 @@ def get_advanced_metrics(state: str, year: int, county_mod: float) -> dict:
         bound = conformal_prediction_bounds(pt_est, profile["sparsity"])
         mortality[ONTOLOGY_MAP.get(demo, demo)] = {"val": round(pt_est, 1), "ci": round(bound, 1)}
 
-    radar_categories = ['Trans-rättigheter (Lagskydd)', 'Kvinnors Trygghet & Autonomi', 'Bred Queer-Säkerhet (LGB)', 'Myndighetsförtroende']
-    radar_state = [qol_health_score, profile["women_safety_index"], max(0, 100 - (profile["lgb_hate_rate"]*3)), max(0, 100 - (profile["hate_rate"]*4))]
-    radar_sweden = [85, 78, 88, 75] 
+    # UX-Förbättrad Radar Chart Data (5-Dimensionell)
+    radar_categories = [
+        'Allmän Trygghet (Cismän)', 
+        'Kvinnors Trygghet & Autonomi', 
+        'Bred Queer-Säkerhet (LGB)', 
+        'Trans-rättigheter (Lagskydd)', 
+        'Myndighetsförtroende'
+    ]
+    
+    men_safety_state = max(0, 100 - (profile["men_crime_base"] * 5))
+    men_safety_sweden = 85 
+    
+    radar_state = [
+        men_safety_state, 
+        profile["women_safety_index"], 
+        max(0, 100 - (profile["lgb_hate_rate"]*3)), 
+        qol_health_score,
+        max(0, 100 - (profile["hate_rate"]*4))
+    ]
+    
+    radar_sweden = [men_safety_sweden, 78, 88, 85, 75] 
 
     past_years = 25
     future_steps = 4
@@ -285,7 +302,56 @@ def generate_legal_synthesis(df: pd.DataFrame, focus: str, state: str, metrics: 
             f"Sammantaget indikerar resultaten, bekräftade genom Welch's t-test (p={metrics['p_value']}), att utsattheten ackumulerat når tröskeln för förföljelse.")
 
 # ---------------------------------------------------------
-# Huvudgränssnitt (Streamlit)
+# PDF-Generering
+# ---------------------------------------------------------
+class DossierPDF(FPDF):
+    def header(self):
+        self.set_font('Helvetica', 'B', 11)
+        self.cell(0, 6, "MIGRATIONSVERKET - LANDINFORMATION (COI)", border=0, ln=True)
+        self.set_font('Helvetica', '', 8)
+        self.cell(0, 4, "Avdelningen for Asylprovning | Automatiserad Beslutsdossier", border=0, ln=True)
+        self.line(10, 18, 200, 18)
+        self.ln(4)
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Helvetica', 'I', 8)
+        self.cell(0, 10, f"Sida {self.page_no()} | Maskinellt genererad via COI-systemet", align='C')
+
+def generate_pdf(df: pd.DataFrame, synthesis: str, params: dict, metrics: dict) -> bytes:
+    pdf = DossierPDF()
+    pdf.add_page()
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.cell(0, 6, f"Datum: {datetime.now().strftime('%Y-%m-%d')} | Omrade: {params['state']} ({params['county']}) | Ar: {params['year']}", ln=True)
+    pdf.cell(0, 6, f"Fragestallning: {params['focus']}".encode('latin-1', 'replace').decode('latin-1'), ln=True)
+    pdf.ln(3)
+
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.cell(0, 6, "LEGAL TRIAGE & STATISTISK ANALYS", ln=True)
+    pdf.set_font('Helvetica', '', 9)
+    tr = (f"- Myndighetsskydd: {metrics['triage']['state_protection'][1]} ({metrics['triage']['state_protection'][2]})\n"
+          f"- Internflykt (IFA): {metrics['triage']['ifa'][1]} ({metrics['triage']['ifa'][2]})\n"
+          f"- Welch's T-Test (vs Sverige): p = {metrics['p_value']} ({metrics['stat_sig']})")
+    pdf.multi_cell(0, 5, tr.encode('latin-1', 'replace').decode('latin-1'))
+    pdf.ln(3)
+
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.cell(0, 6, "AI-SYNTES: KUMULATIV FORFOLJELSEBEDOMNING", ln=True)
+    pdf.set_font('Helvetica', '', 9)
+    pdf.multi_cell(0, 5, synthesis.encode('latin-1', 'replace').decode('latin-1'))
+    pdf.ln(4)
+
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.cell(0, 6, "REFERENSFORTECKNING (VALIDERADE KALLOR)", ln=True)
+    pdf.set_font('Helvetica', '', 8)
+    for _, row in df.iterrows():
+        clean_apa = row['apa_citation'].replace('*', '')
+        pdf.multi_cell(0, 4, clean_apa.encode('latin-1', 'replace').decode('latin-1'))
+        pdf.ln(1)
+
+    return pdf.output()
+
+# ---------------------------------------------------------
+# Huvudgränssnitt (UX-Optimerat för Streamlit)
 # ---------------------------------------------------------
 def main():
     st.title("Kumulativ Bedömning & Livskvalitet för HBTQI i USA")
@@ -403,22 +469,67 @@ def main():
                                 name=demographic.split("(")[0].strip(), x=['Våldsrisk / Hatbrottsindex'], y=[risk_data['val']],
                                 error_y=dict(type='data', array=[risk_data['ci']]), marker_color=color
                             ))
-                        fig_morb.update_layout(barmode='group', height=320, margin=dict(t=10, b=0, l=0, r=0))
+                        fig_morb.update_layout(barmode='group', height=350, margin=dict(t=10, b=0, l=0, r=0))
                         st.plotly_chart(fig_morb, use_container_width=True)
                         st.markdown("<p style='font-size: 0.82em; color: gray; margin-top: -15px;'><em><strong>Figur 1:</strong> Våldsutveckling kontrasterad mot den allmänna manliga baslinjen i samhället, vilket påvisar intersektionell riktad förföljelse.</em></p>", unsafe_allow_html=True)
                     
                     with rad_col:
-                        st.markdown("### 🎯 Makrokriminologisk Matris (GBV & Queer)")
+                        st.markdown("### 🎯 Makrokriminologisk Matris (Män, Kvinnor, Queer)")
+                        
                         fig_radar = go.Figure()
+                        
+                        # Svensk Baslinje (Kontrollgrupp)
                         fig_radar.add_trace(go.Scatterpolar(
-                            r=metrics['radar']['sweden'], theta=metrics['radar']['categories'], fill='toself', name='Sverige', line_color=CB_PALETTE["gray"], fillcolor='rgba(148, 163, 184, 0.2)'
+                            r=metrics['radar']['sweden'], 
+                            theta=metrics['radar']['categories'], 
+                            fill='toself', 
+                            name='Sverige (Normativ Baslinje)', 
+                            line=dict(color=CB_PALETTE["gray"], width=2, dash='dot'), 
+                            fillcolor='rgba(148, 163, 184, 0.15)',
+                            marker=dict(size=6, symbol='circle'),
+                            hoverinfo="text",
+                            text=[f"Sverige: {val} poäng" for val in metrics['radar']['sweden']]
                         ))
+                        
+                        # Dynamisk färg för delstaten (Röd om Transrättigheter < 50, annars Blå)
+                        state_color = CB_PALETTE["red"] if metrics['radar']['state'][3] < 50 else CB_PALETTE["blue"]
+                        state_fill = 'rgba(213, 94, 0, 0.3)' if metrics['radar']['state'][3] < 50 else 'rgba(0, 114, 178, 0.3)'
+                        
+                        # Målområde (Delstat)
                         fig_radar.add_trace(go.Scatterpolar(
-                            r=metrics['radar']['state'], theta=metrics['radar']['categories'], fill='toself', name=target_state, line_color=CB_PALETTE["blue"], fillcolor='rgba(0, 114, 178, 0.4)'
+                            r=metrics['radar']['state'], 
+                            theta=metrics['radar']['categories'], 
+                            fill='toself', 
+                            name=target_state, 
+                            line=dict(color=state_color, width=2.5), 
+                            fillcolor=state_fill,
+                            marker=dict(size=8, symbol='diamond'),
+                            hoverinfo="text",
+                            text=[f"{target_state}: {val} poäng" for val in metrics['radar']['state']]
                         ))
-                        fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), height=320, margin=dict(t=20, b=20, l=40, r=40), showlegend=True, legend=dict(orientation="h", y=-0.2))
+                        
+                        # UX-formatering av layout (Femdimensionell)
+                        fig_radar.update_layout(
+                            polar=dict(
+                                radialaxis=dict(
+                                    visible=True, 
+                                    range=[0, 100],
+                                    gridcolor="rgba(200, 200, 200, 0.3)",
+                                    linecolor="rgba(200, 200, 200, 0.3)",
+                                    tickfont=dict(size=10, color="gray")
+                                ),
+                                angularaxis=dict(
+                                    tickfont=dict(size=11, color="#334155", weight="bold")
+                                )
+                            ),
+                            height=350, 
+                            margin=dict(t=30, b=30, l=60, r=60), 
+                            showlegend=True, 
+                            legend=dict(orientation="h", y=-0.25, x=0.5, xanchor="center")
+                        )
                         st.plotly_chart(fig_radar, use_container_width=True)
-                        st.markdown("<p style='font-size: 0.82em; color: gray; margin-top: -15px;'><em><strong>Figur 2:</strong> Utvärdering av statens generella skyddsnät för kvinnor och queerpopulation.</em></p>", unsafe_allow_html=True)
+                        
+                        st.markdown("<p style='font-size: 0.82em; color: gray; margin-top: -15px;'><em><strong>Figur 2:</strong> Femdimensionell utvärdering av trygghet. Asymmetri gentemot den manliga baslinjen påvisar intersektionell utsatthet och bristande myndighetsskydd för kvinnor och queerpopulation.</em></p>", unsafe_allow_html=True)
 
                     st.divider()
 

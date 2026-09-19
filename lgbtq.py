@@ -18,7 +18,7 @@ try:
 except ImportError:
     BeautifulSoup = None
 
-st.set_page_config(page_title="LGBTQ US COI Assessment (AI Enterprise Build)", layout="wide")
+st.set_page_config(page_title="LGBTQ US COI Assessment", layout="wide")
 
 # Okabe-Ito Color-Blind Friendly Palette
 CB_PALETTE = {"red": "#D55E00", "yellow": "#F0E442", "green": "#009E73", "blue": "#0072B2", "gray": "#999999"}

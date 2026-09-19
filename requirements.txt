@@ -1,8 +1,9 @@
 streamlit
-requests
 pandas
+numpy
+scipy
 plotly
-openai
-fpdf2
-streamlit-autorefresh
+requests
+pydantic
 beautifulsoup4
+reportlab

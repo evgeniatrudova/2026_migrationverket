@@ -35,7 +35,6 @@ CB_PALETTE = {
     "blue": "#0072B2", "gray": "#999999", "purple": "#CC79A7"
 }
 
-# Utökad ontologi för djuplodande kriminologisk jämförelse
 ONTOLOGY_MAP = {
     "cis_men": "UN-REF-M (Cismän, allmän våldsbaslinje i samhället)",
     "cis_women": "UN-GBV-01 (Ciskvinnor, könsrelaterat våld & utsatthet)",
@@ -62,7 +61,6 @@ STATE_ABBR = {
     "New York": "NY", "Ohio": "OH", "Tennessee": "TN", "Texas": "TX", "Washington": "WA"
 }
 
-# Inkluderar män (allmänt våld), kvinnor (säkerhetsindex) och queer-utsatthet
 STATE_EMPIRICAL_DB = {
     "Arizona": {"intro": 14, "passed": 1, "tier": "Gul", "risk_score": 50, "care": "Restriktioner", "homeless_rr": 3.4, "men_crime_base": 4.5, "women_safety_index": 55, "lgb_hate_rate": 12.1, "hate_rate": 8.5, "pop_millions": 7.3, "sparsity": 0.4},
     "Texas": {"intro": 56, "passed": 7, "tier": "Röd", "risk_score": 90, "care": "Totalförbud", "homeless_rr": 4.1, "men_crime_base": 5.2, "women_safety_index": 35, "lgb_hate_rate": 18.4, "hate_rate": 11.2, "pop_millions": 30.0, "sparsity": 0.2},
@@ -185,8 +183,8 @@ def fetch_academic_data(state: str, year: int, num_articles: int) -> dict:
 
     # 2. Demografiska källor: Män, Kvinnor & Queer-grupper
     sociology_sources = [
-        (f"National Crime Victimization Survey (NCVS). ({year}). Baseline Violence Trends Among Men in {state}.", "Figur 1 (Mortalitet): Sätter allmän våldsbaslinje (Kontrollgrupp cismän)."),
-        (f"CDC NISVS. ({year}). Intimate Partner Violence and Women's Safety Index in {state}.", "Figur 2 (Radar): Makrokriminologisk bedömning av kvinnofrid och institutionellt skydd."),
+        (f"National Crime Victimization Survey (NCVS). ({year}). Baseline Violence Trends Among Men in {state}.", "Figur 1 (Mortalitet) & Figur 2 (Gap): Sätter allmän vålds- och trygghetsbaslinje (Kontrollgrupp cismän)."),
+        (f"CDC NISVS. ({year}). Intimate Partner Violence and Women's Safety Index in {state}.", "Figur 2 (Gap-analys): Makrokriminologisk bedömning av kvinnofrid och institutionellt skydd."),
         (f"Williams Institute. ({year}). LGBT Victimization: Broad Queer Safety in {state}.", "Figur 1 & 2: Kvantifierar den allmänna queer-populationens utsatthet utanför lagstiftningens ramar."),
         (f"FBI UCR Hate Crime Data. ({year}). SOGI-related Hate Crimes in {state}.", "Figur 4 (ARIMA): Kriminologisk basfrekvens och mörkertalsberäkning.")
     ]
@@ -236,27 +234,26 @@ def get_advanced_metrics(state: str, year: int, county_mod: float) -> dict:
         bound = conformal_prediction_bounds(pt_est, profile["sparsity"])
         mortality[ONTOLOGY_MAP.get(demo, demo)] = {"val": round(pt_est, 1), "ci": round(bound, 1)}
 
-    # UX-Förbättrad Radar Chart Data (5-Dimensionell)
-    radar_categories = [
-        'Allmän Trygghet (Cismän)', 
-        'Kvinnors Trygghet & Autonomi', 
-        'Bred Queer-Säkerhet (LGB)', 
+    # Ny Matrix-data anpassad för Dumbbell Gap-analys
+    matrix_categories = [
+        'Myndighetsförtroende', 
         'Trans-rättigheter (Lagskydd)', 
-        'Myndighetsförtroende'
+        'Bred Queer-Säkerhet (LGB)', 
+        'Kvinnors Trygghet & Autonomi', 
+        'Allmän Trygghet (Cismän)'
     ]
-    
     men_safety_state = max(0, 100 - (profile["men_crime_base"] * 5))
     men_safety_sweden = 85 
     
-    radar_state = [
-        men_safety_state, 
-        profile["women_safety_index"], 
-        max(0, 100 - (profile["lgb_hate_rate"]*3)), 
+    matrix_state = [
+        max(0, 100 - (profile["hate_rate"]*4)),
         qol_health_score,
-        max(0, 100 - (profile["hate_rate"]*4))
+        max(0, 100 - (profile["lgb_hate_rate"]*3)),
+        profile["women_safety_index"],
+        men_safety_state
     ]
     
-    radar_sweden = [men_safety_sweden, 78, 88, 85, 75] 
+    matrix_sweden = [75, 85, 88, 78, men_safety_sweden] 
 
     past_years = 25
     future_steps = 4
@@ -273,7 +270,7 @@ def get_advanced_metrics(state: str, year: int, county_mod: float) -> dict:
     return {
         "profile": profile, "provenance": provenance, "county_mod": county_mod,
         "triage": triage, "qol": qol, "mortality": mortality,
-        "radar": {"categories": radar_categories, "state": radar_state, "sweden": radar_sweden},
+        "matrix": {"categories": matrix_categories, "state": matrix_state, "sweden": matrix_sweden},
         "years": years_list, "state_trend": state_trend, "swe_trend": swe_trend,
         "p_value": round(p_val, 4), "stat_sig": "Statistiskt signifikant" if p_val < 0.05 else "Ej statistiskt signifikant"
     }
@@ -288,7 +285,7 @@ def generate_legal_synthesis(df: pd.DataFrame, focus: str, state: str, metrics: 
             Du är asylrättsjurist vid Migrationsverket. Skriv en objektiv rättslig bedömning på svenska gällande '{focus}' i {state}.
             Utred kumulativ förföljelse baserat på:
             - Kriminologisk referens: Jämförelse mellan allmänt våld (cismän) vs våld mot kvinnor, queer- och transpersoner.
-            - Makrokriminologisk Matrix: Kvinnors utsatthet (GBV) och bred HBTQ-säkerhet.
+            - Dumbbell Gap-analys: Påvisar systemiskt diskriminerande utsatthet.
             - Welch's T-Test P-Värde mot svensk baslinje: {metrics['p_value']} ({metrics['stat_sig']})
             Skriv tre sammanhängande stycken på saklig juridisk svenska.
             """
@@ -366,7 +363,8 @@ def main():
         2. **Kvinnor (GBV & Autonomi):** Ett samhälles oförmåga att skydda kvinnor och deras kroppsliga autonomi fungerar som en ledande judiciell indikator för statens ovilja/oförmåga att skydda könsminoriteter.
         3. **Queer-populationen (LGB):** Data för hela HBTQ-spektrumet agerar som proxy när specifik trans-statistik saknas eller är svårt underrapporterad (kriminologiskt mörkertal).
         
-        Modellen analyserar hur mycket våldsrisken för trans- och queerpersoner överstiger den allmänna baslinjen (män), vilket matematiskt bevisar statens diskriminerande skyddsbrist.
+        **Visuell Bevisföring (Dumbbell Gap Chart):**
+        Istället för att slå ihop risker i en otydlig area-graf, färgkodas varje demografi. Genom att mäta "avståndet" (gapet) mellan statens poäng och Sveriges baslinje synliggörs omedelbart ifall staten har en systemisk, oproportionerlig utsatthet för specifika grupper.
         """)
     
     st.markdown(
@@ -439,22 +437,22 @@ def main():
             if not semantic_safety_classifier(focus):
                 st.error("🚨 SÄKERHETSVARNING: Blockering av prompt injection.")
             else:
-                with st.spinner("Hämtar data från NCVS, CDC, Williams Institute och PubMed. Integrerar män, kvinnor och queer-demografi..."):
+                with st.spinner("Hämtar data från NCVS, CDC, Williams Institute och PubMed. Kalkylerar Gap-analys..."):
                     metrics = get_advanced_metrics(target_state, target_year, county_mod)
                     pm_result = fetch_academic_data(target_state, target_year, num_articles)
                     
                     swe_baselines = [
                         {"id": "FOHM-2024", "apa_citation": "Folkhälsomyndigheten. (2024). Hur mår transpersoner?", "data_node": "Figur 3 (QoL): Svensk baslinje."},
                         {"id": "SOC-2026", "apa_citation": "Socialstyrelsen. (2026). Tillgänglighet och vårdgaranti.", "data_node": "Figur 3 (QoL): Svenska väntetider."},
-                        {"id": "BRA-2025", "apa_citation": "Brottsförebyggande rådet. (2025). Mäns våld mot kvinnor och hatbrott.", "data_node": "Figur 2 (Radar): Jämförande svensk kontrollgrupp."}
+                        {"id": "BRA-2025", "apa_citation": "Brottsförebyggande rådet. (2025). Nationella trygghetsundersökningen.", "data_node": "Figur 2 (Gap-Analys): Jämförande svensk kontrollgrupp (Vita punkter)."}
                     ]
                     df = pd.DataFrame(pm_result["articles"] + swe_baselines)
                     synthesis = generate_legal_synthesis(df, focus, target_state, metrics)
                     
                     st.divider()
 
-                    # --- SEKTION: MORTALITET & RADAR ---
-                    m_col, rad_col = st.columns(2)
+                    # --- SEKTION: MORTALITET & DUMBBELL GAP CHART ---
+                    m_col, gap_col = st.columns(2)
                     with m_col:
                         st.markdown("### 📉 Makrokriminologisk Mortalitet (Demografier)")
                         fig_morb = go.Figure()
@@ -469,67 +467,65 @@ def main():
                                 name=demographic.split("(")[0].strip(), x=['Våldsrisk / Hatbrottsindex'], y=[risk_data['val']],
                                 error_y=dict(type='data', array=[risk_data['ci']]), marker_color=color
                             ))
-                        fig_morb.update_layout(barmode='group', height=350, margin=dict(t=10, b=0, l=0, r=0))
+                        fig_morb.update_layout(barmode='group', height=320, margin=dict(t=10, b=0, l=0, r=0))
                         st.plotly_chart(fig_morb, use_container_width=True)
                         st.markdown("<p style='font-size: 0.82em; color: gray; margin-top: -15px;'><em><strong>Figur 1:</strong> Våldsutveckling kontrasterad mot den allmänna manliga baslinjen i samhället, vilket påvisar intersektionell riktad förföljelse.</em></p>", unsafe_allow_html=True)
                     
-                    with rad_col:
-                        st.markdown("### 🎯 Makrokriminologisk Matris (Män, Kvinnor, Queer)")
+                    with gap_col:
+                        st.markdown("### 🎯 Makrokriminologisk Matris (Dumbbell Gap-analys)")
                         
-                        fig_radar = go.Figure()
+                        fig_matrix = go.Figure()
                         
-                        # Svensk Baslinje (Kontrollgrupp)
-                        fig_radar.add_trace(go.Scatterpolar(
-                            r=metrics['radar']['sweden'], 
-                            theta=metrics['radar']['categories'], 
-                            fill='toself', 
-                            name='Sverige (Normativ Baslinje)', 
-                            line=dict(color=CB_PALETTE["gray"], width=2, dash='dot'), 
-                            fillcolor='rgba(148, 163, 184, 0.15)',
-                            marker=dict(size=6, symbol='circle'),
-                            hoverinfo="text",
-                            text=[f"Sverige: {val} poäng" for val in metrics['radar']['sweden']]
+                        cat_y = metrics['matrix']['categories'][::-1] # Vänd så Cismän hamnar överst
+                        swe_x = metrics['matrix']['sweden'][::-1]
+                        state_x = metrics['matrix']['state'][::-1]
+                        
+                        # Färgkodning per demografi/kategori (matchar ordningen i cat_y)
+                        state_trans_score = state_x[3] # Index för Trans-rättigheter i reversed list
+                        state_trans_color = CB_PALETTE["red"] if state_trans_score < 50 else CB_PALETTE["blue"]
+                        
+                        marker_colors = [
+                            "#334155",             # Myndighetsförtroende
+                            state_trans_color,     # Trans
+                            CB_PALETTE["yellow"],  # Queer
+                            CB_PALETTE["purple"],  # Kvinnor
+                            CB_PALETTE["gray"]     # Män
+                        ]
+                        
+                        for i in range(len(cat_y)):
+                            fig_matrix.add_trace(go.Scatter(
+                                x=[swe_x[i], state_x[i]],
+                                y=[cat_y[i], cat_y[i]],
+                                mode='lines',
+                                line=dict(color='rgba(150, 150, 150, 0.4)', width=4),
+                                showlegend=False,
+                                hoverinfo='skip'
+                            ))
+                            
+                        fig_matrix.add_trace(go.Scatter(
+                            x=swe_x, y=cat_y, mode='markers', name='Sverige (Baslinje)',
+                            marker=dict(color='white', size=10, symbol='circle', line=dict(color=CB_PALETTE["gray"], width=2)),
+                            hoverinfo="text", text=[f"Sverige: {val} p" for val in swe_x]
                         ))
                         
-                        # Dynamisk färg för delstaten (Röd om Transrättigheter < 50, annars Blå)
-                        state_color = CB_PALETTE["red"] if metrics['radar']['state'][3] < 50 else CB_PALETTE["blue"]
-                        state_fill = 'rgba(213, 94, 0, 0.3)' if metrics['radar']['state'][3] < 50 else 'rgba(0, 114, 178, 0.3)'
-                        
-                        # Målområde (Delstat)
-                        fig_radar.add_trace(go.Scatterpolar(
-                            r=metrics['radar']['state'], 
-                            theta=metrics['radar']['categories'], 
-                            fill='toself', 
-                            name=target_state, 
-                            line=dict(color=state_color, width=2.5), 
-                            fillcolor=state_fill,
-                            marker=dict(size=8, symbol='diamond'),
-                            hoverinfo="text",
-                            text=[f"{target_state}: {val} poäng" for val in metrics['radar']['state']]
+                        fig_matrix.add_trace(go.Scatter(
+                            x=state_x, y=cat_y, mode='markers', name=target_state,
+                            marker=dict(color=marker_colors, size=14, symbol='circle', line=dict(color='white', width=1)),
+                            hoverinfo="text", text=[f"{target_state}: {val} p" for val in state_x]
                         ))
                         
-                        # UX-formatering av layout (Femdimensionell)
-                        fig_radar.update_layout(
-                            polar=dict(
-                                radialaxis=dict(
-                                    visible=True, 
-                                    range=[0, 100],
-                                    gridcolor="rgba(200, 200, 200, 0.3)",
-                                    linecolor="rgba(200, 200, 200, 0.3)",
-                                    tickfont=dict(size=10, color="gray")
-                                ),
-                                angularaxis=dict(
-                                    tickfont=dict(size=11, color="#334155", weight="bold")
-                                )
-                            ),
-                            height=350, 
-                            margin=dict(t=30, b=30, l=60, r=60), 
+                        fig_matrix.update_layout(
+                            xaxis=dict(range=[0, 100], title="Trygghetsindex (0-100)", gridcolor="rgba(200, 200, 200, 0.2)"),
+                            yaxis=dict(gridcolor="rgba(200, 200, 200, 0.2)"),
+                            height=320, 
+                            margin=dict(t=20, b=30, l=10, r=20), 
                             showlegend=True, 
-                            legend=dict(orientation="h", y=-0.25, x=0.5, xanchor="center")
+                            legend=dict(orientation="h", y=-0.3, x=0.5, xanchor="center"),
+                            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)"
                         )
-                        st.plotly_chart(fig_radar, use_container_width=True)
+                        st.plotly_chart(fig_matrix, use_container_width=True)
                         
-                        st.markdown("<p style='font-size: 0.82em; color: gray; margin-top: -15px;'><em><strong>Figur 2:</strong> Femdimensionell utvärdering av trygghet. Asymmetri gentemot den manliga baslinjen påvisar intersektionell utsatthet och bristande myndighetsskydd för kvinnor och queerpopulation.</em></p>", unsafe_allow_html=True)
+                        st.markdown("<p style='font-size: 0.82em; color: gray; margin-top: -15px;'><em><strong>Figur 2:</strong> Dumbbell Gap-analys. Färgkodad per demografi. Avståndet (linjen) visualiserar statens systematiska diskrepans (gap) mot den svenska baslinjen för respektive grupp.</em></p>", unsafe_allow_html=True)
 
                     st.divider()
 
